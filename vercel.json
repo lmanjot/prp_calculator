@@ -8,6 +8,14 @@
   ],
   "routes": [
     {
+      "src": "/calculate",
+      "dest": "/api/calculate"
+    },
+    {
+      "src": "/health",
+      "dest": "/api/health"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
