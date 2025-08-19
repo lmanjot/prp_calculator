@@ -1,5 +1,8 @@
+from flask import Flask, request, jsonify
 import json
 import math
+
+app = Flask(__name__)
 
 # Configuration constants
 ZONES = {
@@ -101,66 +104,72 @@ def calculate_prp_dosage(input_data):
         'zones': results
     }
 
-def handler(request):
-    # Set CORS headers
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Type': 'application/json'
-    }
+@app.route('/', methods=['GET', 'POST'])
+def handler():
+    # Add CORS headers
+    def add_cors_headers(response):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
     
-    try:
-        # Handle CORS preflight
-        if request.method == 'OPTIONS':
-            return '', 200, headers
-        
-        # Handle GET request for health/documentation
-        if request.method == 'GET':
-            return json.dumps({
-                'service': 'PRP Dosage Calculator API',
-                'version': '1.0.0',
-                'status': 'healthy',
-                'endpoints': {
-                    'POST /calculate': 'Calculate PRP dosage',
-                    'POST /api/calculate': 'Calculate PRP dosage (alternative path)',
-                    'GET /health': 'Health check'
-                },
-                'example_request': {
-                    'thrombocytes': 200,
-                    'prp_yield': 1.0,
-                    'prp_concentration': 7.0,
-                    'ppp_concentration': 0.5
-                }
-            }), 200, headers
-        
-        # Handle POST request for calculation
-        if request.method == 'POST':
-            # Get JSON data
-            try:
-                if hasattr(request, 'get_json'):
-                    input_data = request.get_json()
-                else:
-                    input_data = json.loads(request.data or '{}')
-            except:
-                return json.dumps({'error': 'Invalid JSON'}), 400, headers
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        return add_cors_headers(response)
+    
+    if request.method == 'GET':
+        response = jsonify({
+            'service': 'PRP Dosage Calculator API',
+            'version': '1.0.0',
+            'status': 'healthy',
+            'endpoints': {
+                'POST /api/calculate': 'Calculate PRP dosage',
+                'GET /api/calculate': 'API documentation'
+            },
+            'example_request': {
+                'thrombocytes': 200,
+                'prp_yield': 1.0,
+                'prp_concentration': 7.0,
+                'ppp_concentration': 0.5
+            }
+        })
+        return add_cors_headers(response)
+    
+    if request.method == 'POST':
+        try:
+            # Validate request content type
+            if not request.is_json:
+                response = jsonify({'error': 'Content-Type must be application/json'})
+                response.status_code = 400
+                return add_cors_headers(response)
+            
+            input_data = request.get_json()
+            
+            if not input_data:
+                response = jsonify({'error': 'No JSON data provided'})
+                response.status_code = 400
+                return add_cors_headers(response)
             
             # Validate required fields
-            if not input_data or 'thrombocytes' not in input_data:
-                return json.dumps({'error': 'Missing required field: thrombocytes'}), 400, headers
+            if 'thrombocytes' not in input_data:
+                response = jsonify({'error': 'Missing required field: thrombocytes'})
+                response.status_code = 400
+                return add_cors_headers(response)
             
             # Perform calculation
             results = calculate_prp_dosage(input_data)
             
-            return json.dumps({
+            response = jsonify({
                 'success': True,
                 'data': results
-            }), 200, headers
-        
-        # Method not allowed
-        return json.dumps({'error': 'Method not allowed'}), 405, headers
-        
-    except ValueError as e:
-        return json.dumps({'error': f'Invalid input: {str(e)}'}), 400, headers
-    except Exception as e:
-        return json.dumps({'error': f'Calculation error: {str(e)}'}), 500, headers
+            })
+            return add_cors_headers(response)
+            
+        except ValueError as e:
+            response = jsonify({'error': f'Invalid input: {str(e)}'})
+            response.status_code = 400
+            return add_cors_headers(response)
+        except Exception as e:
+            response = jsonify({'error': f'Calculation error: {str(e)}'})
+            response.status_code = 500
+            return add_cors_headers(response)
