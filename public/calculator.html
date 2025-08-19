@@ -519,21 +519,8 @@
                         concentrationEl.classList.add('text-gray-600');
                 }
                 
-                // Update the result card styling based on concentration status
-                const resultCard = document.getElementById(`result-card-${zoneKey}`);
-                resultCard.classList.remove('border-green-200', 'border-yellow-200', 'border-red-200', 'bg-green-50', 'bg-yellow-50', 'bg-red-50');
-                
-                switch (zone.concentration_status) {
-                    case 'optimal':
-                        resultCard.classList.add('border-green-200', 'bg-green-50');
-                        break;
-                    case 'above_max':
-                        resultCard.classList.add('border-yellow-200', 'bg-yellow-50');
-                        break;
-                    case 'below_min':
-                        resultCard.classList.add('border-red-200', 'bg-red-50');
-                        break;
-                }
+                // Note: Result card styling removed - we don't highlight cards based on concentration
+                // since we need to hit the target regardless of concentration status
             });
 
             // Update concentration feedback
@@ -682,6 +669,19 @@
 
         // --- EVENT LISTENERS ---
         calculateBtn.addEventListener('click', enhancedCalculateDosage);
+        
+        // Add Enter key functionality to trigger calculate button
+        document.addEventListener('keydown', function(event) {
+            // Check if Enter key is pressed and we're not in a textarea or contenteditable element
+            if (event.key === 'Enter' && 
+                !event.target.matches('textarea') && 
+                !event.target.matches('[contenteditable="true"]') &&
+                !calculateBtn.disabled) {
+                
+                event.preventDefault(); // Prevent form submission if in a form
+                enhancedCalculateDosage();
+            }
+        });
         
         // Initialize floating labels on page load
         document.addEventListener('DOMContentLoaded', initializeFloatingLabels);
