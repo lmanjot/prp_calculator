@@ -374,6 +374,8 @@
                         <div class="result-grid">
                             <span class="result-label">Total Injection Vol:</span>
                             <span class="result-value" id="total-volume-display-temporal_crown">0 ml</span>
+                            <span class="result-label">Final Concentration:</span>
+                            <span class="result-value" id="final-concentration-temporal_crown">0 M/µL</span>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-temporal_crown">0 ml</span>
@@ -400,6 +402,8 @@
                         <div class="result-grid">
                             <span class="result-label">Total Injection Vol:</span>
                             <span class="result-value" id="total-volume-display-full_scalp">0 ml</span>
+                            <span class="result-label">Final Concentration:</span>
+                            <span class="result-value" id="final-concentration-full_scalp">0 M/µL</span>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-full_scalp">0 ml</span>
@@ -494,6 +498,42 @@
                 document.getElementById(`tubes-needed-${zoneKey}`).textContent = `${zone.tubes_needed}`;
                 document.getElementById(`prp-explanation-${zoneKey}`).textContent = explanationText;
                 document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${zone.extract_volume_per_tube_ml} ml`;
+                
+                // Update final concentration with color coding based on status
+                const concentrationEl = document.getElementById(`final-concentration-${zoneKey}`);
+                concentrationEl.textContent = `${zone.final_injection_concentration_millions}M/µL`;
+                
+                // Color code based on concentration status
+                concentrationEl.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600');
+                switch (zone.concentration_status) {
+                    case 'optimal':
+                        concentrationEl.classList.add('text-green-600', 'font-bold');
+                        break;
+                    case 'above_max':
+                        concentrationEl.classList.add('text-yellow-600', 'font-bold');
+                        break;
+                    case 'below_min':
+                        concentrationEl.classList.add('text-red-600', 'font-bold');
+                        break;
+                    default:
+                        concentrationEl.classList.add('text-gray-600');
+                }
+                
+                // Update the result card styling based on concentration status
+                const resultCard = document.getElementById(`result-card-${zoneKey}`);
+                resultCard.classList.remove('border-green-200', 'border-yellow-200', 'border-red-200', 'bg-green-50', 'bg-yellow-50', 'bg-red-50');
+                
+                switch (zone.concentration_status) {
+                    case 'optimal':
+                        resultCard.classList.add('border-green-200', 'bg-green-50');
+                        break;
+                    case 'above_max':
+                        resultCard.classList.add('border-yellow-200', 'bg-yellow-50');
+                        break;
+                    case 'below_min':
+                        resultCard.classList.add('border-red-200', 'bg-red-50');
+                        break;
+                }
             });
 
             // Update concentration feedback

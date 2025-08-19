@@ -51,8 +51,11 @@ function calculatePRPDosage(inputData) {
         // C. Calculate actual total PRP volume extracted
         const totalPRPExtractedML = tubesNeeded * prpYieldPerTube;
         
-        // D. Calculate PPP dilution if PRP is too concentrated
+        // D. Calculate PPP dilution to achieve optimal concentration range
         let dilutionPPPML = 0;
+        let finalInjectionConcentrationPerUL = finalPRPConcentrationPerUL;
+        
+        // If PRP is too concentrated (above max), dilute with PPP
         if (finalPRPConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
             const numerator = totalPRPExtractedML * (finalPRPConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL);
             const denominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPPPConcentrationPerUL;
@@ -60,8 +63,14 @@ function calculatePRPDosage(inputData) {
                 dilutionPPPML = numerator / denominator;
             }
         }
+        // If PRP is too weak (below min), we need to concentrate it or use less volume
+        else if (finalPRPConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL) {
+            // For concentrations below minimum, we can't fix with PPP (would make it weaker)
+            // The user needs a higher concentration protocol or more tubes
+            // We'll calculate as-is but flag this in the results
+        }
         
-        // E. Calculate top-up PPP if volume is below minimum
+        // E. Calculate top-up PPP if volume is below minimum (after concentration adjustment)
         const volumeAfterDilution = totalPRPExtractedML + dilutionPPPML;
         const volumeTopUpPPPML = Math.max(0, minVolume - volumeAfterDilution);
         
@@ -69,6 +78,19 @@ function calculatePRPDosage(inputData) {
         const totalPPPNeededML = dilutionPPPML + volumeTopUpPPPML;
         const totalInjectionVolume = totalPRPExtractedML + totalPPPNeededML;
         const extractVolumePerTube = tubesNeeded > 0 ? totalInjectionVolume / tubesNeeded : 0;
+        
+        // Calculate final injection concentration after all dilutions
+        // Total platelets = PRP platelets + PPP platelets
+        const totalPlateletsInPRP = totalPRPExtractedML * finalPRPConcentrationPerUL * 1000; // platelets per mL * mL * 1000
+        const totalPlateletsInPPP = totalPPPNeededML * finalPPPConcentrationPerUL * 1000;
+        const totalPlatelets = totalPlateletsInPRP + totalPlateletsInPPP;
+        
+        // Final concentration = total platelets / total volume (converted back to per µL)
+        finalInjectionConcentrationPerUL = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
+        
+        // Check if final concentration is within therapeutic range
+        const concentrationStatus = finalInjectionConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL ? 'below_min' :
+                                   finalInjectionConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL ? 'above_max' : 'optimal';
         
         results[zoneKey] = {
             zone_name: zone.name,
@@ -78,7 +100,10 @@ function calculatePRPDosage(inputData) {
             total_ppp_needed_ml: Math.round(totalPPPNeededML * 10) / 10,
             extract_volume_per_tube_ml: Math.round(extractVolumePerTube * 10) / 10,
             target_platelets: targetPlatelets,
-            min_volume_ml: minVolume
+            min_volume_ml: minVolume,
+            final_injection_concentration_per_ul: Math.round(finalInjectionConcentrationPerUL),
+            final_injection_concentration_millions: Math.round((finalInjectionConcentrationPerUL / 1000000) * 100) / 100,
+            concentration_status: concentrationStatus
         };
     });
     
