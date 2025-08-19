@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>PRP Dosage Calculator for Hair Restoration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        }
+        
+        /* Modern Input Field Styles */
+        .input-container {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1e293b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #0a9396;
+            box-shadow: 0 0 0 3px rgba(10, 147, 150, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .form-input:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transform: scale(1.02);
+        }
+        
+        .form-label {
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            background: linear-gradient(to bottom, transparent 50%, #ffffff 50%);
+            padding: 0 0.25rem;
+        }
+        
+        .form-input:focus + .form-label,
+        .form-input:not(:placeholder-shown) + .form-label,
+        .form-input.has-value + .form-label {
+            top: -0.5rem;
+            left: 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #0a9396;
+            background: #ffffff;
+            padding: 0 0.5rem;
+        }
+        
+        /* Input with unit styling */
+        .input-with-unit {
+            position: relative;
+        }
+        
+        .input-with-unit .form-input {
+            padding-right: 3.5rem;
+        }
+        
+        .input-unit {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            pointer-events: none;
+        }
+        
+        /* Helper text styling */
+        .helper-text {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.5rem;
+            margin-left: 0.25rem;
+        }
+        
+        /* Section styling improvements */
+        .section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        
+        /* Compact collapsed state for PRP Protocol */
+        .section-card.collapsed {
+            padding: 1rem 1.5rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .section-header.collapsed {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .section-header.collapsed .section-title {
+            font-size: 1rem;
+            color: #64748b;
+        }
+        
+        .section-header.collapsed .section-icon {
+            font-size: 1rem;
+        }
+        
+        /* Hover effect for collapsible sections */
+        .section-header.cursor-pointer:hover {
+            background-color: #f1f5f9;
+            border-radius: 8px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .section-header.collapsed.cursor-pointer:hover {
+            background-color: #e2e8f0;
+        }
+        
+        /* Advanced label for collapsed state */
+        .advanced-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            background: #e2e8f0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+        
+        /* Responsive adjustments for collapsed state */
+        @media (max-width: 640px) {
+            .section-card.collapsed {
+                padding: 0.75rem 1rem;
+            }
+            
+            .section-header.collapsed .section-title {
+                font-size: 0.9rem;
+            }
+            
+            .advanced-label {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.4rem;
+                margin-left: 0.25rem;
+            }
+        }
+        
+
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .section-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: linear-gradient(135deg, #0a9396 0%, #005f73 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+        
+        /* Button improvements */
+        .calculate-button {
+            width: 100%;
+            background: linear-gradient(135deg, #0a9396 0%, #005f73 100%);
+            color: white;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 1.125rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .calculate-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(10, 147, 150, 0.4), 0 4px 6px -2px rgba(10, 147, 150, 0.2);
+        }
+        
+        .calculate-button:active {
+            transform: translateY(0);
+        }
+        
+        /* Legacy styles for results section */
+        .gradient-text {
+            background: linear-gradient(to right, #0a9396, #005f73);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 0.75rem;
+            align-items: center;
+            text-align: left;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.875rem;
+        }
+        
+        .result-value {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.875rem;
+            text-align: right;
+        }
+        
+        /* Animation for smooth transitions */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen bg-slate-50 py-12">
+
+    <div class="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8 lg:p-12 space-y-8">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Advanced PRP Dosage Calculator</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">Calculates required volumes based on target platelet count and optimal concentration for hair restoration treatments.</p>
+        </div>
+
+        <div id="calculator-form" class="space-y-8">
+            
+            <!-- Section 1: Patient Data -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-icon">
+                        👤
+                    </div>
+                    <h3 class="section-title">Patient Data</h3>
+                </div>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="input-container">
+                        <div class="input-with-unit">
+                            <input type="number" id="thrombocytes" class="form-input" value="200" placeholder=" ">
+                            <label for="thrombocytes" class="form-label">Patient Thrombocytes</label>
+                            <span class="input-unit">G/L</span>
+                        </div>
+                        <p class="helper-text">Normal range: 150-450 G/L</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: PRP Protocol -->
+            <div class="section-card collapsed">
+                <div class="section-header collapsed cursor-pointer" onclick="togglePrpProtocol()">
+                    <div class="section-icon">
+                        🧪
+                    </div>
+                    <h3 class="section-title">PRP Protocol</h3>
+                    <span class="advanced-label">Advanced</span>
+                    <div class="ml-auto">
+                        <span id="prp-toggle-icon" class="text-gray-500 transition-transform duration-300">▼</span>
+                    </div>
+                </div>
+                <div id="prp-protocol-content" class="grid grid-cols-1 sm:grid-cols-3 gap-6 hidden">
+                    <div class="input-container">
+                        <div class="input-with-unit">
+                            <input type="number" id="prp-yield" class="form-input" value="1" step="0.1" placeholder=" " title="The exact amount of pure PRP to extract from each 10ml tube of blood.">
+                            <label for="prp-yield" class="form-label">PRP Yield / Tube</label>
+                            <span class="input-unit">ml</span>
+                        </div>
+                        <p class="helper-text">Default: 1 ml</p>
+                    </div>
+                    <div class="input-container">
+                        <div class="input-with-unit">
+                            <input type="number" id="prp-concentration" class="form-input" value="7" step="0.1" placeholder=" ">
+                            <label for="prp-concentration" class="form-label">PRP Concentration</label>
+                            <span class="input-unit">x</span>
+                        </div>
+                        <p class="helper-text">Default: 7x</p>
+                    </div>
+                    <div class="input-container">
+                        <div class="input-with-unit">
+                            <input type="number" id="ppp-concentration" class="form-input" value="0.5" step="0.1" placeholder=" ">
+                            <label for="ppp-concentration" class="form-label">PPP Concentration</label>
+                            <span class="input-unit">x</span>
+                        </div>
+                        <p class="helper-text">Default: 0.5x</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <button id="calculate-btn" class="calculate-button">
+                    <span class="mr-2">⚙️</span>
+                    Calculate Dosage
+                </button>
+            </div>
+        </div>
+
+        <div id="results" class="hidden pt-8">
+            <div class="border-t-2 border-gray-200 pt-8">
+                <div id="concentration-feedback" class="mb-8 p-6 rounded-2xl text-center shadow-lg">
+                    <p class="font-bold text-lg mb-2">PRP Concentration Analysis</p>
+                    <p id="feedback-text" class="text-sm leading-relaxed"></p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Temporal/Crown Result Card -->
+                    <div id="result-card-temporal_crown" class="section-card">
+                        <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Temporal / Crown</h2>
+                        <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600 mb-2">Blood Tubes</p>
+                                <p class="text-4xl font-black gradient-text" id="tubes-needed-temporal_crown">0</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
+                                <p class="text-4xl font-black gradient-text" id="extract-per-tube-temporal_crown">0 ml</p>
+                            </div>
+                        </div>
+                        <div class="result-grid">
+                            <span class="result-label">Total Injection Vol:</span>
+                            <span class="result-value" id="total-volume-display-temporal_crown">0 ml</span>
+                            <span class="result-label">Total PRP Volume:</span>
+                            <div class="text-right">
+                                <span class="result-value" id="prp-needed-temporal_crown">0 ml</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="prp-explanation-temporal_crown"></p>
+                            </div>
+                            <span class="result-label">PPP to Add:</span>
+                            <span class="result-value" id="ppp-needed-temporal_crown">0 ml</span>
+                        </div>
+                    </div>
+
+                    <!-- Full Scalp Result Card -->
+                    <div id="result-card-full_scalp" class="section-card">
+                        <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Full Scalp</h2>
+                        <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600 mb-2">Blood Tubes</p>
+                                <p class="text-4xl font-black gradient-text" id="tubes-needed-full_scalp">0</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
+                                <p class="text-4xl font-black gradient-text" id="extract-per-tube-full_scalp">0 ml</p>
+                            </div>
+                        </div>
+                        <div class="result-grid">
+                            <span class="result-label">Total Injection Vol:</span>
+                            <span class="result-value" id="total-volume-display-full_scalp">0 ml</span>
+                            <span class="result-label">Total PRP Volume:</span>
+                            <div class="text-right">
+                                <span class="result-value" id="prp-needed-full_scalp">0 ml</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="prp-explanation-full_scalp"></p>
+                            </div>
+                            <span class="result-label">PPP to Add:</span>
+                            <span class="result-value" id="ppp-needed-full_scalp">0 ml</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const ZONES = {
+            temporal_crown: { name: 'Temporal/Crown', targetPlatelets: 1.75e9, minVolume: 2.0 },
+            full_scalp: { name: 'Full Scalp', targetPlatelets: 3.5e9, minVolume: 2.0 }
+        };
+        const OPTIMAL_MIN_PLATELETS_PER_UL = 1000000;
+        const OPTIMAL_MAX_PLATELETS_PER_UL = 1500000;
+
+        // --- DOM ELEMENTS ---
+        const calculateBtn = document.getElementById('calculate-btn');
+        const resultsDiv = document.getElementById('results');
+        
+        const thrombocytesInput = document.getElementById('thrombocytes');
+        const prpYieldInput = document.getElementById('prp-yield');
+        const prpConcentrationInput = document.getElementById('prp-concentration');
+        const pppConcentrationInput = document.getElementById('ppp-concentration');
+        
+        const feedbackDiv = document.getElementById('concentration-feedback');
+        const feedbackTextEl = document.getElementById('feedback-text');
+
+        // --- CALCULATION LOGIC ---
+        function calculateDosage() {
+            // 1. Get user inputs
+            const patientThrombocytesGL = parseFloat(thrombocytesInput.value) || 0;
+            const prpYieldPerTube = parseFloat(prpYieldInput.value) || 0;
+            const prpConcentrationX = parseFloat(prpConcentrationInput.value) || 0;
+            const pppConcentrationX = parseFloat(pppConcentrationInput.value) || 0;
+
+            // 2. Calculate base concentrations
+            const baselinePlateletsPerUL = patientThrombocytesGL * 1000;
+            const finalPrpConcentrationPerUL = baselinePlateletsPerUL * prpConcentrationX;
+            const finalPppConcentrationPerUL = baselinePlateletsPerUL * pppConcentrationX;
+            const plateletsPerMLofPRP = finalPrpConcentrationPerUL * 1000;
+
+            // 3. Loop through each zone and perform calculations
+            Object.keys(ZONES).forEach(zoneKey => {
+                const zone = ZONES[zoneKey];
+                const { targetPlatelets, minVolume } = zone;
+
+                // A. Determine the theoretical minimum volume of PRP needed to hit the target platelet count.
+                const requiredPrpVolumeML = plateletsPerMLofPRP > 0 ? targetPlatelets / plateletsPerMLofPRP : 0;
+                
+                // B. Based on the fixed yield per tube, calculate how many tubes are needed.
+                const tubesNeeded = prpYieldPerTube > 0 ? Math.ceil(requiredPrpVolumeML / prpYieldPerTube) : 0;
+                
+                // C. Calculate the ACTUAL total volume of PRP that will be extracted. This is the fixed amount we work with.
+                const totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
+
+                let dilutionPppML = 0;
+                // D. If the initial PRP is too concentrated, calculate how much PPP must be ADDED to dilute the extracted PRP.
+                if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
+                    const numerator = totalPrpExtractedML * (finalPrpConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL);
+                    const denominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
+                    if (denominator > 0) {
+                        dilutionPppML = numerator / denominator;
+                    }
+                }
+
+                let volumeAfterDilution = totalPrpExtractedML + dilutionPppML;
+                let volumeTopUpPppML = 0;
+
+                // E. After dilution, if the total volume is still below the minimum, calculate how much more PPP to ADD.
+                if (volumeAfterDilution < minVolume) {
+                    volumeTopUpPppML = minVolume - volumeAfterDilution;
+                }
+                
+                const totalPppNeededML = dilutionPppML + volumeTopUpPppML;
+                const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
+                const extractVolumePerTube = tubesNeeded > 0 ? totalInjectionVolume / tubesNeeded : 0;
+                const explanationText = tubesNeeded > 0 ? `(${tubesNeeded} tube${tubesNeeded > 1 ? 's' : ''} × ${prpYieldPerTube.toFixed(1)} ml)` : '';
+
+
+                // 4. Update the UI for the specific zone card
+                document.getElementById(`total-volume-display-${zoneKey}`).textContent = `${totalInjectionVolume.toFixed(1)} ml`;
+                document.getElementById(`prp-needed-${zoneKey}`).textContent = `${totalPrpExtractedML.toFixed(1)} ml`;
+                document.getElementById(`ppp-needed-${zoneKey}`).textContent = `${totalPppNeededML.toFixed(1)} ml`;
+                document.getElementById(`tubes-needed-${zoneKey}`).textContent = `${tubesNeeded}`;
+                document.getElementById(`prp-explanation-${zoneKey}`).textContent = explanationText;
+                document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${extractVolumePerTube.toFixed(1)} ml`;
+            });
+
+            // 5. Provide overall feedback on the initial PRP concentration
+            let feedbackMsg = `Your initial PRP has a concentration of <strong>${(finalPrpConcentrationPerUL / 1000000).toFixed(2)}M platelets/µL</strong>.`;
+            
+            if (finalPrpConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL) {
+                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-yellow-100 text-yellow-800';
+                feedbackMsg += ' This is below the therapeutic window. Consider a higher concentration or alternative treatment.';
+            } else if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
+                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-blue-100 text-blue-800';
+                feedbackMsg += ' This is above the optimal window. The treatment plan below adds the required PPP to dilute the final mixture to the target 1.5M/µL concentration.';
+            } else {
+                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-green-100 text-green-800';
+                feedbackMsg += ' This is within the optimal therapeutic window. Excellent!';
+            }
+            feedbackTextEl.innerHTML = feedbackMsg;
+
+            // 6. Show the results section
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // --- FLOATING LABEL FUNCTIONALITY ---
+        function initializeFloatingLabels() {
+            const inputs = document.querySelectorAll('.form-input');
+            
+            inputs.forEach(input => {
+                // Set initial state based on value
+                if (input.value) {
+                    input.classList.add('has-value');
+                }
+                
+                // Handle input events
+                input.addEventListener('input', function() {
+                    if (this.value) {
+                        this.classList.add('has-value');
+                    } else {
+                        this.classList.remove('has-value');
+                    }
+                });
+                
+                // Handle focus events for better UX
+                input.addEventListener('focus', function() {
+                    this.style.transform = 'scale(1.02)';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        }
+        
+        // --- ENHANCED RESULTS ANIMATION ---
+        function showResults() {
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.classList.add('animate-slide-in');
+            
+            // Scroll to results smoothly
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
+        }
+        
+        // --- ENHANCED CALCULATE FUNCTION ---
+        function enhancedCalculateDosage() {
+            // Add loading state to button
+            const originalText = calculateBtn.innerHTML;
+            calculateBtn.innerHTML = '<span class="mr-2">⏳</span>Calculating...';
+            calculateBtn.disabled = true;
+            
+            // Simulate brief calculation time for UX
+            setTimeout(() => {
+                calculateDosage();
+                showResults();
+                
+                // Reset button
+                calculateBtn.innerHTML = originalText;
+                calculateBtn.disabled = false;
+            }, 500);
+        }
+
+        // --- PRP PROTOCOL TOGGLE FUNCTIONALITY ---
+        function togglePrpProtocol() {
+            const content = document.getElementById('prp-protocol-content');
+            const icon = document.getElementById('prp-toggle-icon');
+            const card = content.closest('.section-card');
+            const header = card.querySelector('.section-header');
+            
+            if (content.classList.contains('hidden')) {
+                // Expanding
+                content.classList.remove('hidden');
+                card.classList.remove('collapsed');
+                header.classList.remove('collapsed');
+                icon.style.transform = 'rotate(180deg)';
+                icon.textContent = '▲';
+            } else {
+                // Collapsing
+                content.classList.add('hidden');
+                card.classList.add('collapsed');
+                header.classList.add('collapsed');
+                icon.style.transform = 'rotate(0deg)';
+                icon.textContent = '▼';
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        calculateBtn.addEventListener('click', enhancedCalculateDosage);
+        
+        // Initialize floating labels on page load
+        document.addEventListener('DOMContentLoaded', initializeFloatingLabels);
+
+    </script>
+</body>
+</html>
