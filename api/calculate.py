@@ -4,9 +4,8 @@ PRP Dosage Calculator API - Calculate Endpoint
 Vercel serverless function for PRP dosage calculations
 """
 
-import math
 import json
-from http.server import BaseHTTPRequestHandler
+import math
 from typing import Dict, Any
 
 # Configuration constants (extracted from the original JavaScript)
@@ -133,65 +132,79 @@ def calculate_prp_dosage(input_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        """Handle CORS preflight requests"""
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-        return
-
-    def do_POST(self):
-        """Handle POST requests"""
-        try:
-            # Read request body
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            
-            # Parse JSON
+def handler(event, context):
+    """
+    Vercel serverless function handler for the calculate endpoint
+    """
+    
+    # Set CORS headers
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        # Handle CORS preflight
+        if event.get('httpMethod') == 'OPTIONS':
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({'status': 'ok'})
+            }
+        
+        # Only allow POST
+        if event.get('httpMethod') != 'POST':
+            return {
+                'statusCode': 405,
+                'headers': headers,
+                'body': json.dumps({'error': 'Method not allowed'})
+            }
+        
+        # Parse request body
+        body = event.get('body', '{}')
+        if isinstance(body, str):
             try:
-                input_data = json.loads(post_data.decode('utf-8'))
+                input_data = json.loads(body)
             except json.JSONDecodeError:
-                self._send_error(400, 'Invalid JSON data')
-                return
-            
-            # Validate required fields
-            if 'thrombocytes' not in input_data:
-                self._send_error(400, 'Missing required field: thrombocytes')
-                return
-            
-            # Perform calculation
-            results = calculate_prp_dosage(input_data)
-            
-            # Send successful response
-            self._send_json_response({
+                return {
+                    'statusCode': 400,
+                    'headers': headers,
+                    'body': json.dumps({'error': 'Invalid JSON data'})
+                }
+        else:
+            input_data = body
+        
+        # Validate required fields
+        if 'thrombocytes' not in input_data:
+            return {
+                'statusCode': 400,
+                'headers': headers,
+                'body': json.dumps({'error': 'Missing required field: thrombocytes'})
+            }
+        
+        # Perform calculation
+        results = calculate_prp_dosage(input_data)
+        
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
                 'success': True,
                 'data': results
             })
-            
-        except ValueError as e:
-            self._send_error(400, f'Invalid input: {str(e)}')
-        except Exception as e:
-            self._send_error(500, f'Calculation error: {str(e)}')
-
-    def do_GET(self):
-        """Handle GET requests - not allowed for this endpoint"""
-        self._send_error(405, 'Method not allowed')
-
-    def _send_json_response(self, data, status_code=200):
-        """Send JSON response with CORS headers"""
-        self.send_response(status_code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
+        }
         
-        response_data = json.dumps(data)
-        self.wfile.write(response_data.encode('utf-8'))
-
-    def _send_error(self, status_code, message):
-        """Send error response with CORS headers"""
-        self._send_json_response({'error': message}, status_code)
+    except ValueError as e:
+        return {
+            'statusCode': 400,
+            'headers': headers,
+            'body': json.dumps({'error': f'Invalid input: {str(e)}'})
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({'error': f'Calculation error: {str(e)}'})
+        }
