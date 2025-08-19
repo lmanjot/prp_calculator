@@ -4,11 +4,10 @@ PRP Dosage Calculator API - Calculate Endpoint
 Vercel serverless function for PRP dosage calculations
 """
 
-from flask import Flask, request, jsonify
 import math
+import json
+from http.server import BaseHTTPRequestHandler
 from typing import Dict, Any
-
-app = Flask(__name__)
 
 # Configuration constants (extracted from the original JavaScript)
 ZONES = {
@@ -134,57 +133,65 @@ def calculate_prp_dosage(input_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def handler(request):
-    """
-    Vercel serverless function handler for the calculate endpoint
-    """
-    try:
-        # Handle CORS for browser requests
-        if request.method == 'OPTIONS':
-            return jsonify({'status': 'ok'}), 200, {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type'
-            }
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+        return
+
+    def do_POST(self):
+        """Handle POST requests"""
+        try:
+            # Read request body
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            # Parse JSON
+            try:
+                input_data = json.loads(post_data.decode('utf-8'))
+            except json.JSONDecodeError:
+                self._send_error(400, 'Invalid JSON data')
+                return
+            
+            # Validate required fields
+            if 'thrombocytes' not in input_data:
+                self._send_error(400, 'Missing required field: thrombocytes')
+                return
+            
+            # Perform calculation
+            results = calculate_prp_dosage(input_data)
+            
+            # Send successful response
+            self._send_json_response({
+                'success': True,
+                'data': results
+            })
+            
+        except ValueError as e:
+            self._send_error(400, f'Invalid input: {str(e)}')
+        except Exception as e:
+            self._send_error(500, f'Calculation error: {str(e)}')
+
+    def do_GET(self):
+        """Handle GET requests - not allowed for this endpoint"""
+        self._send_error(405, 'Method not allowed')
+
+    def _send_json_response(self, data, status_code=200):
+        """Send JSON response with CORS headers"""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
         
-        if request.method != 'POST':
-            return jsonify({'error': 'Method not allowed'}), 405
-        
-        # Validate request content type
-        if not request.is_json:
-            return jsonify({'error': 'Content-Type must be application/json'}), 400
-        
-        input_data = request.get_json()
-        
-        if not input_data:
-            return jsonify({'error': 'No JSON data provided'}), 400
-        
-        # Validate required fields
-        if 'thrombocytes' not in input_data:
-            return jsonify({'error': 'Missing required field: thrombocytes'}), 400
-        
-        # Perform calculation
-        results = calculate_prp_dosage(input_data)
-        
-        response = jsonify({
-            'success': True,
-            'data': results
-        })
-        
-        # Add CORS headers
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-        
-        return response
-        
-    except ValueError as e:
-        response = jsonify({'error': f'Invalid input: {str(e)}'})
-        response.status_code = 400
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
-    except Exception as e:
-        response = jsonify({'error': f'Calculation error: {str(e)}'})
-        response.status_code = 500
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        return response
+        response_data = json.dumps(data)
+        self.wfile.write(response_data.encode('utf-8'))
+
+    def _send_error(self, status_code, message):
+        """Send error response with CORS headers"""
+        self._send_json_response({'error': message}, status_code)
