@@ -105,7 +105,7 @@ def handler(request):
     # Set CORS headers
     headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     }
@@ -115,30 +115,50 @@ def handler(request):
         if request.method == 'OPTIONS':
             return '', 200, headers
         
-        # Only allow POST
-        if request.method != 'POST':
-            return json.dumps({'error': 'Method not allowed'}), 405, headers
+        # Handle GET request for health/documentation
+        if request.method == 'GET':
+            return json.dumps({
+                'service': 'PRP Dosage Calculator API',
+                'version': '1.0.0',
+                'status': 'healthy',
+                'endpoints': {
+                    'POST /calculate': 'Calculate PRP dosage',
+                    'POST /api/calculate': 'Calculate PRP dosage (alternative path)',
+                    'GET /health': 'Health check'
+                },
+                'example_request': {
+                    'thrombocytes': 200,
+                    'prp_yield': 1.0,
+                    'prp_concentration': 7.0,
+                    'ppp_concentration': 0.5
+                }
+            }), 200, headers
         
-        # Get JSON data
-        try:
-            if hasattr(request, 'get_json'):
-                input_data = request.get_json()
-            else:
-                input_data = json.loads(request.data or '{}')
-        except:
-            return json.dumps({'error': 'Invalid JSON'}), 400, headers
+        # Handle POST request for calculation
+        if request.method == 'POST':
+            # Get JSON data
+            try:
+                if hasattr(request, 'get_json'):
+                    input_data = request.get_json()
+                else:
+                    input_data = json.loads(request.data or '{}')
+            except:
+                return json.dumps({'error': 'Invalid JSON'}), 400, headers
+            
+            # Validate required fields
+            if not input_data or 'thrombocytes' not in input_data:
+                return json.dumps({'error': 'Missing required field: thrombocytes'}), 400, headers
+            
+            # Perform calculation
+            results = calculate_prp_dosage(input_data)
+            
+            return json.dumps({
+                'success': True,
+                'data': results
+            }), 200, headers
         
-        # Validate required fields
-        if not input_data or 'thrombocytes' not in input_data:
-            return json.dumps({'error': 'Missing required field: thrombocytes'}), 400, headers
-        
-        # Perform calculation
-        results = calculate_prp_dosage(input_data)
-        
-        return json.dumps({
-            'success': True,
-            'data': results
-        }), 200, headers
+        # Method not allowed
+        return json.dumps({'error': 'Method not allowed'}), 405, headers
         
     except ValueError as e:
         return json.dumps({'error': f'Invalid input: {str(e)}'}), 400, headers
