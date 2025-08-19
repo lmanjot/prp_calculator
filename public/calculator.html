@@ -457,19 +457,19 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': 'Bearer Shared1Mara!'
                     },
                     body: JSON.stringify(inputData)
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-                }
-
                 const result = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 if (!result.success) {
-                    throw new Error(result.error || 'Calculation failed');
+                    throw new Error(result.message || result.error || 'Calculation failed');
                 }
 
                 // 4. Update UI with results

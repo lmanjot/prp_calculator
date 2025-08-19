@@ -155,12 +155,15 @@ function calculatePRPDosage(inputData) {
     };
 }
 
+// Authentication token
+const AUTH_TOKEN = 'Shared1Mara!';
+
 // Vercel serverless function handler
 export default function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Content-Type', 'application/json');
     
     try {
@@ -168,6 +171,20 @@ export default function handler(req, res) {
         if (req.method === 'OPTIONS') {
             res.status(200).json({ status: 'ok' });
             return;
+        }
+        
+        // Check authentication for non-GET requests
+        if (req.method === 'POST') {
+            const authHeader = req.headers.authorization;
+            const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+            
+            if (!token || token !== AUTH_TOKEN) {
+                res.status(401).json({ 
+                    error: 'Unauthorized',
+                    message: 'Valid authentication token required'
+                });
+                return;
+            }
         }
         
         // Handle GET request for documentation
@@ -195,13 +212,22 @@ export default function handler(req, res) {
             const inputData = req.body;
             
             if (!inputData) {
-                res.status(400).json({ error: 'No JSON data provided' });
+                res.status(200).json({ 
+                    success: false,
+                    error: 'No JSON data provided',
+                    message: 'Please provide input data for calculation'
+                });
                 return;
             }
             
-            // Validate required fields
-            if (!inputData.thrombocytes) {
-                res.status(400).json({ error: 'Missing required field: thrombocytes' });
+            // Check if thrombocytes value is provided
+            if (!inputData.thrombocytes || inputData.thrombocytes <= 0) {
+                res.status(200).json({ 
+                    success: false,
+                    error: 'Missing or invalid thrombocyte value',
+                    message: 'Please provide a valid thrombocyte count greater than 0',
+                    received_data: inputData
+                });
                 return;
             }
             
