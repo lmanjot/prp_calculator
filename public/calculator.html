@@ -417,12 +417,7 @@
 
     <script>
         // --- CONFIGURATION ---
-        const ZONES = {
-            temporal_crown: { name: 'Temporal/Crown', targetPlatelets: 1.75e9, minVolume: 2.0 },
-            full_scalp: { name: 'Full Scalp', targetPlatelets: 3.5e9, minVolume: 2.0 }
-        };
-        const OPTIMAL_MIN_PLATELETS_PER_UL = 1000000;
-        const OPTIMAL_MAX_PLATELETS_PER_UL = 1500000;
+        const API_BASE_URL = '/api'; // Relative to current domain
 
         // --- DOM ELEMENTS ---
         const calculateBtn = document.getElementById('calculate-btn');
@@ -436,84 +431,121 @@
         const feedbackDiv = document.getElementById('concentration-feedback');
         const feedbackTextEl = document.getElementById('feedback-text');
 
-        // --- CALCULATION LOGIC ---
-        function calculateDosage() {
-            // 1. Get user inputs
-            const patientThrombocytesGL = parseFloat(thrombocytesInput.value) || 0;
-            const prpYieldPerTube = parseFloat(prpYieldInput.value) || 0;
-            const prpConcentrationX = parseFloat(prpConcentrationInput.value) || 0;
-            const pppConcentrationX = parseFloat(pppConcentrationInput.value) || 0;
+        // --- API CALCULATION LOGIC ---
+        async function calculateDosage() {
+            try {
+                // 1. Get user inputs
+                const inputData = {
+                    thrombocytes: parseFloat(thrombocytesInput.value) || 0,
+                    prp_yield: parseFloat(prpYieldInput.value) || 1.0,
+                    prp_concentration: parseFloat(prpConcentrationInput.value) || 7.0,
+                    ppp_concentration: parseFloat(pppConcentrationInput.value) || 0.5
+                };
 
-            // 2. Calculate base concentrations
-            const baselinePlateletsPerUL = patientThrombocytesGL * 1000;
-            const finalPrpConcentrationPerUL = baselinePlateletsPerUL * prpConcentrationX;
-            const finalPppConcentrationPerUL = baselinePlateletsPerUL * pppConcentrationX;
-            const plateletsPerMLofPRP = finalPrpConcentrationPerUL * 1000;
-
-            // 3. Loop through each zone and perform calculations
-            Object.keys(ZONES).forEach(zoneKey => {
-                const zone = ZONES[zoneKey];
-                const { targetPlatelets, minVolume } = zone;
-
-                // A. Determine the theoretical minimum volume of PRP needed to hit the target platelet count.
-                const requiredPrpVolumeML = plateletsPerMLofPRP > 0 ? targetPlatelets / plateletsPerMLofPRP : 0;
-                
-                // B. Based on the fixed yield per tube, calculate how many tubes are needed.
-                const tubesNeeded = prpYieldPerTube > 0 ? Math.ceil(requiredPrpVolumeML / prpYieldPerTube) : 0;
-                
-                // C. Calculate the ACTUAL total volume of PRP that will be extracted. This is the fixed amount we work with.
-                const totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
-
-                let dilutionPppML = 0;
-                // D. If the initial PRP is too concentrated, calculate how much PPP must be ADDED to dilute the extracted PRP.
-                if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
-                    const numerator = totalPrpExtractedML * (finalPrpConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL);
-                    const denominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
-                    if (denominator > 0) {
-                        dilutionPppML = numerator / denominator;
-                    }
+                // 2. Validate required inputs
+                if (!inputData.thrombocytes || inputData.thrombocytes <= 0) {
+                    showError('Please enter a valid thrombocyte count greater than 0.');
+                    return;
                 }
 
-                let volumeAfterDilution = totalPrpExtractedML + dilutionPppML;
-                let volumeTopUpPppML = 0;
+                // 3. Call the API
+                const response = await fetch(`${API_BASE_URL}/calculate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(inputData)
+                });
 
-                // E. After dilution, if the total volume is still below the minimum, calculate how much more PPP to ADD.
-                if (volumeAfterDilution < minVolume) {
-                    volumeTopUpPppML = minVolume - volumeAfterDilution;
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
+
+                const result = await response.json();
                 
-                const totalPppNeededML = dilutionPppML + volumeTopUpPppML;
-                const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
-                const extractVolumePerTube = tubesNeeded > 0 ? totalInjectionVolume / tubesNeeded : 0;
-                const explanationText = tubesNeeded > 0 ? `(${tubesNeeded} tube${tubesNeeded > 1 ? 's' : ''} × ${prpYieldPerTube.toFixed(1)} ml)` : '';
+                if (!result.success) {
+                    throw new Error(result.error || 'Calculation failed');
+                }
 
+                // 4. Update UI with results
+                updateUIWithResults(result.data);
 
-                // 4. Update the UI for the specific zone card
-                document.getElementById(`total-volume-display-${zoneKey}`).textContent = `${totalInjectionVolume.toFixed(1)} ml`;
-                document.getElementById(`prp-needed-${zoneKey}`).textContent = `${totalPrpExtractedML.toFixed(1)} ml`;
-                document.getElementById(`ppp-needed-${zoneKey}`).textContent = `${totalPppNeededML.toFixed(1)} ml`;
-                document.getElementById(`tubes-needed-${zoneKey}`).textContent = `${tubesNeeded}`;
+            } catch (error) {
+                console.error('Calculation error:', error);
+                showError(`Calculation failed: ${error.message}`);
+            }
+        }
+
+        // --- UI UPDATE FUNCTIONS ---
+        function updateUIWithResults(data) {
+            const { zones, concentration_feedback, input_parameters } = data;
+
+            // Update each zone's results
+            Object.keys(zones).forEach(zoneKey => {
+                const zone = zones[zoneKey];
+                const explanationText = zone.tubes_needed > 0 ? 
+                    `(${zone.tubes_needed} tube${zone.tubes_needed > 1 ? 's' : ''} × ${input_parameters.prp_yield_ml.toFixed(1)} ml)` : '';
+
+                // Update the UI for the specific zone card
+                document.getElementById(`total-volume-display-${zoneKey}`).textContent = `${zone.total_injection_volume_ml} ml`;
+                document.getElementById(`prp-needed-${zoneKey}`).textContent = `${zone.total_prp_volume_ml} ml`;
+                document.getElementById(`ppp-needed-${zoneKey}`).textContent = `${zone.total_ppp_needed_ml} ml`;
+                document.getElementById(`tubes-needed-${zoneKey}`).textContent = `${zone.tubes_needed}`;
                 document.getElementById(`prp-explanation-${zoneKey}`).textContent = explanationText;
-                document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${extractVolumePerTube.toFixed(1)} ml`;
+                document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${zone.extract_volume_per_tube_ml} ml`;
             });
 
-            // 5. Provide overall feedback on the initial PRP concentration
-            let feedbackMsg = `Your initial PRP has a concentration of <strong>${(finalPrpConcentrationPerUL / 1000000).toFixed(2)}M platelets/µL</strong>.`;
+            // Update concentration feedback
+            const feedback = concentration_feedback;
+            let feedbackClass;
             
-            if (finalPrpConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL) {
-                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-yellow-100 text-yellow-800';
-                feedbackMsg += ' This is below the therapeutic window. Consider a higher concentration or alternative treatment.';
-            } else if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
-                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-blue-100 text-blue-800';
-                feedbackMsg += ' This is above the optimal window. The treatment plan below adds the required PPP to dilute the final mixture to the target 1.5M/µL concentration.';
-            } else {
-                feedbackDiv.className = 'mb-6 p-4 rounded-lg text-center bg-green-100 text-green-800';
-                feedbackMsg += ' This is within the optimal therapeutic window. Excellent!';
+            switch (feedback.type) {
+                case 'warning':
+                    feedbackClass = 'mb-6 p-4 rounded-lg text-center bg-yellow-100 text-yellow-800';
+                    break;
+                case 'info':
+                    feedbackClass = 'mb-6 p-4 rounded-lg text-center bg-blue-100 text-blue-800';
+                    break;
+                case 'success':
+                    feedbackClass = 'mb-6 p-4 rounded-lg text-center bg-green-100 text-green-800';
+                    break;
+                default:
+                    feedbackClass = 'mb-6 p-4 rounded-lg text-center bg-gray-100 text-gray-800';
             }
-            feedbackTextEl.innerHTML = feedbackMsg;
+            
+            feedbackDiv.className = feedbackClass;
+            feedbackTextEl.innerHTML = feedback.message.replace(/(\d+\.\d+M platelets\/µL)/, '<strong>$1</strong>');
 
-            // 6. Show the results section
+            // Show the results section
             resultsDiv.classList.remove('hidden');
+            hideError();
+        }
+
+        function showError(message) {
+            // Create or update error display
+            let errorDiv = document.getElementById('error-message');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'error-message';
+                errorDiv.className = 'mb-6 p-4 rounded-lg text-center bg-red-100 text-red-800';
+                
+                // Insert before results div
+                resultsDiv.parentNode.insertBefore(errorDiv, resultsDiv);
+            }
+            
+            errorDiv.innerHTML = `<strong>Error:</strong> ${message}`;
+            errorDiv.classList.remove('hidden');
+            
+            // Hide results if showing
+            resultsDiv.classList.add('hidden');
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('error-message');
+            if (errorDiv) {
+                errorDiv.classList.add('hidden');
+            }
         }
 
         // --- FLOATING LABEL FUNCTIONALITY ---
@@ -558,21 +590,30 @@
         }
         
         // --- ENHANCED CALCULATE FUNCTION ---
-        function enhancedCalculateDosage() {
+        async function enhancedCalculateDosage() {
             // Add loading state to button
             const originalText = calculateBtn.innerHTML;
             calculateBtn.innerHTML = '<span class="mr-2">⏳</span>Calculating...';
             calculateBtn.disabled = true;
             
-            // Simulate brief calculation time for UX
-            setTimeout(() => {
-                calculateDosage();
+            try {
+                // Hide any previous errors
+                hideError();
+                
+                // Call the API calculation
+                await calculateDosage();
+                
+                // Show results with animation
                 showResults();
                 
-                // Reset button
+            } catch (error) {
+                console.error('Enhanced calculation error:', error);
+                showError(`Calculation failed: ${error.message}`);
+            } finally {
+                // Always reset button state
                 calculateBtn.innerHTML = originalText;
                 calculateBtn.disabled = false;
-            }, 500);
+            }
         }
 
         // --- PRP PROTOCOL TOGGLE FUNCTIONALITY ---
