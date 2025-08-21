@@ -92,67 +92,39 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     const plateletCountTooLow = totalPlatelets < minPlatelets;
     const plateletCountTooHigh = totalPlatelets > maxPlatelets;
     
-    // J. Adjust tube count if needed and try again
-    if (iteration < 5) {
+    // J. Adjust tube count if needed - PRIORITIZE CONCENTRATION OVER PLATELET COUNT
+    if (iteration < 3) { // Reduce iterations to avoid infinite loops
         // Priority 1: If concentration is too low, we need more tubes (more platelets)
         if (concentrationTooLow) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 2: If platelet count is too low, we need more tubes
-        if (plateletCountTooLow) {
-            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+        // Priority 2: If concentration is too high, try to dilute more or reduce tubes
+        if (concentrationTooHigh) {
+            // Try reducing tubes first if platelet count allows it
+            if (tubesNeeded > 1) {
+                const testTubesNeeded = tubesNeeded - 1;
+                const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
+                const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
+                
+                // Accept lower platelet count if it improves concentration
+                if (testTotalPlatelets >= minPlatelets * 0.8) { // Allow 20% below minimum for concentration optimization
+                    return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+                }
+            }
         }
         
-        // Priority 3: If platelet count is too high, try fewer tubes if possible
-        if (plateletCountTooHigh && tubesNeeded > 1) {
-            // Calculate what happens with one fewer tube
-            const testTubesNeeded = tubesNeeded - 1;
-            const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
-            const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
-            
-            // Only reduce tubes if we stay above minimum platelet count
-            if (testTotalPlatelets >= minPlatelets) {
-                // Recalculate with fewer tubes
-                tubesNeeded = testTubesNeeded;
-                totalPrpExtractedML = testTotalPrpML;
-                
-                const newTotalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
-                const newIdealVolumeForTargetConc = newTotalPlateletsFromPRP / (targetConcentration * 1000);
-                const newMaxVolumeForMinConc = newTotalPlateletsFromPRP / (OPTIMAL_MIN_PLATELETS_PER_UL * 1000);
-                
-                let newIdealFinalVolume = Math.min(newIdealVolumeForTargetConc, newMaxVolumeForMinConc);
-                newIdealFinalVolume = Math.max(newIdealFinalVolume, minVolume);
-                
-                concentrationPppML = Math.max(0, newIdealFinalVolume - totalPrpExtractedML);
-                
-                const newVolumeAfterDilution = totalPrpExtractedML + concentrationPppML;
-                const newVolumeTopUpPppML = Math.max(0, minVolume - newVolumeAfterDilution);
-                
-                const newTotalPppNeededML = concentrationPppML + newVolumeTopUpPppML;
-                const newTotalInjectionVolume = totalPrpExtractedML + newTotalPppNeededML;
-                
-                return {
-                    totalInjectionVolume: newTotalInjectionVolume,
-                    totalPrpExtractedML,
-                    totalPppNeededML: newTotalPppNeededML,
-                    tubesNeeded,
-                    extractVolumePerTube: tubesNeeded > 0 ? newTotalInjectionVolume / tubesNeeded : 0,
-                    finalMixtureConcentration: newTotalInjectionVolume > 0 ? 
-                        ((totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (newTotalPppNeededML * finalPppConcentrationPerUL * 1000)) / (newTotalInjectionVolume * 1000) : 0,
-                    totalPlatelets: (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (newTotalPppNeededML * finalPppConcentrationPerUL * 1000),
-                    concentrationStatus: 'optimal', // Will be recalculated below
-                    plateletCountStatus: 'optimal',  // Will be recalculated below
-                    plateletCountRange: `${(minPlatelets/1e9).toFixed(1)}-${(maxPlatelets/1e9).toFixed(1)}B`
-                };
-            }
+        // Priority 3: Only adjust for platelet count if concentration is acceptable
+        const concentrationAcceptable = !concentrationTooLow && !concentrationTooHigh;
+        if (concentrationAcceptable && plateletCountTooLow) {
+            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
     }
 
     // K. Calculate final metrics
     const extractVolumePerTube = tubesNeeded > 0 ? totalInjectionVolume / tubesNeeded : 0;
     
-    // L. Determine status based on both concentration and platelet count
+    // L. Determine status - prioritize concentration feedback
     let concentrationStatus = 'optimal';
     if (finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL) {
         concentrationStatus = 'below_min';
@@ -162,9 +134,19 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     
     let plateletCountStatus = 'optimal';
     if (totalPlatelets < minPlatelets) {
-        plateletCountStatus = 'below_min';
+        // If concentration is good but platelet count is low, mark as acceptable compromise
+        if (concentrationStatus === 'optimal') {
+            plateletCountStatus = 'below_min_acceptable'; // New status for concentration-prioritized cases
+        } else {
+            plateletCountStatus = 'below_min';
+        }
     } else if (totalPlatelets > maxPlatelets) {
-        plateletCountStatus = 'above_max';
+        // If concentration is good but platelet count is high, mark as acceptable compromise  
+        if (concentrationStatus === 'optimal') {
+            plateletCountStatus = 'above_max_acceptable'; // New status for concentration-prioritized cases
+        } else {
+            plateletCountStatus = 'above_max';
+        }
     }
 
     return {
