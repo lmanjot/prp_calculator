@@ -42,21 +42,42 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     // D. Calculate total platelets from actual PRP volume
     const totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
     
-    // E. Determine optimal final volume based on concentration constraints
-    // We want to hit target concentration (1.25M/µL) but not go below minimum (1.0M/µL)
-    const idealVolumeForTargetConc = totalPlateletsFromPRP / (targetConcentration * 1000);
-    const maxVolumeForMinConc = totalPlateletsFromPRP / (OPTIMAL_MIN_PLATELETS_PER_UL * 1000);
+    // E. Calculate PPP needed based on concentration and volume constraints
+    let concentrationPppML = 0;
+    let volumeTopUpPppML = 0;
     
-    // Choose the smaller volume (higher concentration) but respect minimum volume requirement
-    let idealFinalVolume = Math.min(idealVolumeForTargetConc, maxVolumeForMinConc);
-    idealFinalVolume = Math.max(idealFinalVolume, minVolume); // Ensure minimum volume
-    
-    // F. Calculate PPP needed for concentration optimization
-    let concentrationPppML = Math.max(0, idealFinalVolume - totalPrpExtractedML);
-    
-    // G. Ensure we meet minimum volume requirement
-    const volumeAfterConcentrationDilution = totalPrpExtractedML + concentrationPppML;
-    const volumeTopUpPppML = Math.max(0, minVolume - volumeAfterConcentrationDilution);
+    // First, check if PRP alone meets minimum volume
+    if (totalPrpExtractedML >= minVolume) {
+        // We have enough volume, no PPP needed for volume
+        volumeTopUpPppML = 0;
+        
+        // Only add PPP if PRP concentration is too high
+        if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
+            // Calculate dilution needed to bring concentration down to max optimal
+            const excessConcentration = finalPrpConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL;
+            const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
+            if (dilutionDenominator > 0) {
+                concentrationPppML = (totalPrpExtractedML * excessConcentration) / dilutionDenominator;
+            }
+        }
+    } else {
+        // We need to add PPP to reach minimum volume
+        const baseVolumeTopUp = minVolume - totalPrpExtractedML;
+        
+        // Check what concentration we'd get with minimum PPP addition
+        const testTotalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + 
+                                   (baseVolumeTopUp * finalPppConcentrationPerUL * 1000);
+        const testConcentration = testTotalPlatelets / (minVolume * 1000);
+        
+        if (testConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL) {
+            // Adding minimum PPP keeps us above minimum concentration
+            volumeTopUpPppML = baseVolumeTopUp;
+        } else {
+            // Even minimum PPP addition puts us below minimum concentration
+            // This means we need more PRP (more tubes) - let the iteration handle this
+            volumeTopUpPppML = baseVolumeTopUp;
+        }
+    }
     
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
