@@ -59,7 +59,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
         totalPppNeededML,
         tubesNeeded,
         extractVolumePerTube,
-        finalMixtureConcentration
+        finalMixtureConcentration,
+        totalPlatelets
     };
 }
 
@@ -111,6 +112,7 @@ function calculatePRPDosage(inputData) {
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,
             extract_volume_per_tube_ml: Math.round(plan.extractVolumePerTube * 10) / 10,
             target_platelets: ZONES[zoneKey].targetPlatelets,
+            total_platelets_extracted: Math.round(plan.totalPlatelets),
             min_volume_ml: ZONES[zoneKey].minVolume,
             final_injection_concentration_per_ul: Math.round(plan.finalMixtureConcentration),
             final_injection_concentration_millions: Math.round((plan.finalMixtureConcentration / 1000000) * 100) / 100,

@@ -523,8 +523,8 @@
                         concentrationEl.classList.add('text-gray-600');
                 }
                 
-                // Update total platelets extracted
-                const totalPlateletsB = (zone.target_platelets / 1e9).toFixed(2);
+                // Update total platelets extracted (using actual extracted platelets)
+                const totalPlateletsB = (zone.total_platelets_extracted / 1e9).toFixed(2);
                 document.getElementById(`total-platelets-${zoneKey}`).textContent = `${totalPlateletsB}B`;
                 
                 // Note: Result card styling removed - we don't highlight cards based on concentration
