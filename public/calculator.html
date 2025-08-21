@@ -535,16 +535,10 @@
                 plateletEl.textContent = `${totalPlateletsB}B`;
                 
                 // Color code platelets based on range status
-                plateletEl.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600', 'text-blue-600');
+                plateletEl.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600');
                 switch (zone.platelet_count_status) {
                     case 'optimal':
                         plateletEl.classList.add('text-green-600', 'font-bold');
-                        break;
-                    case 'above_max_acceptable':
-                        plateletEl.classList.add('text-blue-600', 'font-bold'); // Blue for acceptable compromise
-                        break;
-                    case 'below_min_acceptable':
-                        plateletEl.classList.add('text-blue-600', 'font-bold'); // Blue for acceptable compromise
                         break;
                     case 'above_max':
                         plateletEl.classList.add('text-yellow-600', 'font-bold');

@@ -6,15 +6,15 @@ const ZONES = {
     'temporal_crown': { 
         name: 'Temporal/Crown', 
         minPlatelets: 1.5e9, 
-        maxPlatelets: 2.0e9, 
-        targetPlatelets: 1.75e9, 
+        maxPlatelets: 5.0e9, 
+        targetPlatelets: 2.5e9, 
         minVolume: 2.0 
     },
     'full_scalp': { 
         name: 'Full Scalp', 
         minPlatelets: 3.0e9, 
-        maxPlatelets: 4.0e9, 
-        targetPlatelets: 3.5e9, 
+        maxPlatelets: 10.0e9, 
+        targetPlatelets: 6.0e9, 
         minVolume: 4.0 
     }
 };
@@ -99,32 +99,28 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 2: If concentration is too high, try to dilute more or reduce tubes
-        if (concentrationTooHigh) {
-            // Try reducing tubes first if platelet count allows it
-            if (tubesNeeded > 1) {
-                const testTubesNeeded = tubesNeeded - 1;
-                const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
-                const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
-                
-                // Accept lower platelet count if it improves concentration
-                if (testTotalPlatelets >= minPlatelets * 0.8) { // Allow 20% below minimum for concentration optimization
-                    return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
-                }
-            }
+        // Priority 2: If platelet count is too low, we need more tubes
+        if (plateletCountTooLow) {
+            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 3: Only adjust for platelet count if concentration is acceptable
-        const concentrationAcceptable = !concentrationTooLow && !concentrationTooHigh;
-        if (concentrationAcceptable && plateletCountTooLow) {
-            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+        // Priority 3: If platelet count is too high, try fewer tubes if possible
+        if (plateletCountTooHigh && tubesNeeded > 1) {
+            const testTubesNeeded = tubesNeeded - 1;
+            const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
+            const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
+            
+            // Only reduce tubes if we stay above minimum platelet count
+            if (testTotalPlatelets >= minPlatelets) {
+                return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+            }
         }
     }
 
     // K. Calculate final metrics
     const extractVolumePerTube = tubesNeeded > 0 ? totalInjectionVolume / tubesNeeded : 0;
     
-    // L. Determine status - prioritize concentration feedback
+    // L. Determine status based on both concentration and platelet count
     let concentrationStatus = 'optimal';
     if (finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL) {
         concentrationStatus = 'below_min';
@@ -134,19 +130,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     
     let plateletCountStatus = 'optimal';
     if (totalPlatelets < minPlatelets) {
-        // If concentration is good but platelet count is low, mark as acceptable compromise
-        if (concentrationStatus === 'optimal') {
-            plateletCountStatus = 'below_min_acceptable'; // New status for concentration-prioritized cases
-        } else {
-            plateletCountStatus = 'below_min';
-        }
+        plateletCountStatus = 'below_min';
     } else if (totalPlatelets > maxPlatelets) {
-        // If concentration is good but platelet count is high, mark as acceptable compromise  
-        if (concentrationStatus === 'optimal') {
-            plateletCountStatus = 'above_max_acceptable'; // New status for concentration-prioritized cases
-        } else {
-            plateletCountStatus = 'above_max';
-        }
+        plateletCountStatus = 'above_max';
     }
 
     return {
