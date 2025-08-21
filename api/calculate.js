@@ -33,8 +33,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     // A. Start with minimum PRP needed to hit minimum platelet count
     let optimalPrpVolumeML = minPlatelets / (finalPrpConcentrationPerUL * 1000);
     
-    // B. Calculate tubes needed for this PRP volume
-    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / prpYieldPerTube));
+    // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
+    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / prpYieldPerTube) + iteration);
     
     // C. Calculate actual PRP volume we'll extract
     let totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
