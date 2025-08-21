@@ -376,6 +376,8 @@
                             <span class="result-value" id="total-volume-display-temporal_crown">0 ml</span>
                             <span class="result-label">Final Concentration:</span>
                             <span class="result-value" id="final-concentration-temporal_crown">0 M/µL</span>
+                            <span class="result-label">Total Platelets Extracted:</span>
+                            <span class="result-value" id="total-platelets-temporal_crown">0 B</span>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-temporal_crown">0 ml</span>
@@ -404,6 +406,8 @@
                             <span class="result-value" id="total-volume-display-full_scalp">0 ml</span>
                             <span class="result-label">Final Concentration:</span>
                             <span class="result-value" id="final-concentration-full_scalp">0 M/µL</span>
+                            <span class="result-label">Total Platelets Extracted:</span>
+                            <span class="result-value" id="total-platelets-full_scalp">0 B</span>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-full_scalp">0 ml</span>
@@ -518,6 +522,10 @@
                     default:
                         concentrationEl.classList.add('text-gray-600');
                 }
+                
+                // Update total platelets extracted
+                const totalPlateletsB = (zone.target_platelets / 1e9).toFixed(2);
+                document.getElementById(`total-platelets-${zoneKey}`).textContent = `${totalPlateletsB}B`;
                 
                 // Note: Result card styling removed - we don't highlight cards based on concentration
                 // since we need to hit the target regardless of concentration status
