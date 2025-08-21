@@ -42,8 +42,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
     // F. Calculate final concentration and check against the minimum threshold
-    const totalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL) + (totalPppNeededML * finalPppConcentrationPerUL);
-    const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / totalInjectionVolume : 0;
+    // Convert mL to µL by multiplying by 1000, then multiply by platelets/µL to get total platelets
+    const totalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
+    const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // G. If concentration is too low and we haven't looped too much, add a tube and recalculate
     if (finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL && iteration < 5) {
