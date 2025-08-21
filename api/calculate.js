@@ -30,28 +30,26 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     // Target concentration: aim for middle of range (1.25M/µL)
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
-    // A. Calculate the optimal volume to hit target platelet count at target concentration
-    const idealVolumeForPlatelets = targetPlatelets / (targetConcentration * 1000); // Convert to mL
+    // A. Start with minimum PRP needed to hit minimum platelet count
+    let optimalPrpVolumeML = minPlatelets / (finalPrpConcentrationPerUL * 1000);
     
-    // B. Calculate how much PRP we need to achieve target platelets at target concentration
-    // If we dilute PRP to target concentration, how much PRP do we need?
-    const pureprpPlateletsNeeded = targetPlatelets; // We want this many platelets total
-    let optimalPrpVolumeML = pureprpPlateletsNeeded / (finalPrpConcentrationPerUL * 1000);
-    
-    // C. Calculate tubes needed for this optimal PRP volume
+    // B. Calculate tubes needed for this PRP volume
     let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / prpYieldPerTube));
     
-    // D. Calculate actual PRP volume we'll extract
+    // C. Calculate actual PRP volume we'll extract
     let totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
     
-    // E. Calculate how much PPP we need to dilute to target concentration
-    // Total platelets from PRP: totalPrpExtractedML * finalPrpConcentrationPerUL * 1000
-    // We want final concentration of targetConcentration
-    // So: totalPlatelets = finalVolume * targetConcentration * 1000
-    // finalVolume = totalPlatelets / (targetConcentration * 1000)
-    
+    // D. Calculate total platelets from actual PRP volume
     const totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
-    const idealFinalVolume = totalPlateletsFromPRP / (targetConcentration * 1000);
+    
+    // E. Determine optimal final volume based on concentration constraints
+    // We want to hit target concentration (1.25M/µL) but not go below minimum (1.0M/µL)
+    const idealVolumeForTargetConc = totalPlateletsFromPRP / (targetConcentration * 1000);
+    const maxVolumeForMinConc = totalPlateletsFromPRP / (OPTIMAL_MIN_PLATELETS_PER_UL * 1000);
+    
+    // Choose the smaller volume (higher concentration) but respect minimum volume requirement
+    let idealFinalVolume = Math.min(idealVolumeForTargetConc, maxVolumeForMinConc);
+    idealFinalVolume = Math.max(idealFinalVolume, minVolume); // Ensure minimum volume
     
     // F. Calculate PPP needed for concentration optimization
     let concentrationPppML = Math.max(0, idealFinalVolume - totalPrpExtractedML);
