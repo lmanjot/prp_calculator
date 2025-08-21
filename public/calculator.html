@@ -377,7 +377,10 @@
                             <span class="result-label">Final Concentration:</span>
                             <span class="result-value" id="final-concentration-temporal_crown">0 M/µL</span>
                             <span class="result-label">Total Platelets Extracted:</span>
-                            <span class="result-value" id="total-platelets-temporal_crown">0 B</span>
+                            <div class="text-right">
+                                <span class="result-value" id="total-platelets-temporal_crown">0 B</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-temporal_crown">Target: 1.5-2.0B</p>
+                            </div>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-temporal_crown">0 ml</span>
@@ -407,7 +410,10 @@
                             <span class="result-label">Final Concentration:</span>
                             <span class="result-value" id="final-concentration-full_scalp">0 M/µL</span>
                             <span class="result-label">Total Platelets Extracted:</span>
-                            <span class="result-value" id="total-platelets-full_scalp">0 B</span>
+                            <div class="text-right">
+                                <span class="result-value" id="total-platelets-full_scalp">0 B</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-full_scalp">Target: 3.0-4.0B</p>
+                            </div>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
                                 <span class="result-value" id="prp-needed-full_scalp">0 ml</span>
@@ -525,7 +531,27 @@
                 
                 // Update total platelets extracted (using actual extracted platelets)
                 const totalPlateletsB = (zone.total_platelets_extracted / 1e9).toFixed(2);
-                document.getElementById(`total-platelets-${zoneKey}`).textContent = `${totalPlateletsB}B`;
+                const plateletEl = document.getElementById(`total-platelets-${zoneKey}`);
+                plateletEl.textContent = `${totalPlateletsB}B`;
+                
+                // Color code platelets based on range status
+                plateletEl.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600');
+                switch (zone.platelet_count_status) {
+                    case 'optimal':
+                        plateletEl.classList.add('text-green-600', 'font-bold');
+                        break;
+                    case 'above_max':
+                        plateletEl.classList.add('text-yellow-600', 'font-bold');
+                        break;
+                    case 'below_min':
+                        plateletEl.classList.add('text-red-600', 'font-bold');
+                        break;
+                    default:
+                        plateletEl.classList.add('text-gray-600');
+                }
+                
+                // Update platelet range display
+                document.getElementById(`platelet-range-${zoneKey}`).textContent = `Target: ${zone.platelet_count_range}`;
                 
                 // Note: Result card styling removed - we don't highlight cards based on concentration
                 // since we need to hit the target regardless of concentration status
