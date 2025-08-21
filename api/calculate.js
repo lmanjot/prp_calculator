@@ -66,24 +66,43 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // I. Check if we're within acceptable ranges
-    const concentrationInRange = finalMixtureConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL && 
-                                finalMixtureConcentration <= OPTIMAL_MAX_PLATELETS_PER_UL;
-    const plateletCountInRange = totalPlatelets >= minPlatelets && totalPlatelets <= maxPlatelets;
+    const concentrationTooLow = finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL;
+    const concentrationTooHigh = finalMixtureConcentration > OPTIMAL_MAX_PLATELETS_PER_UL;
+    const plateletCountTooLow = totalPlatelets < minPlatelets;
+    const plateletCountTooHigh = totalPlatelets > maxPlatelets;
     
-    // J. If we're outside platelet range, adjust tube count and try again
-    if (!plateletCountInRange && iteration < 5) {
-        if (totalPlatelets < minPlatelets) {
-            // Need more platelets - add a tube
+    // J. Adjust tube count if needed and try again
+    if (iteration < 5) {
+        // Priority 1: If concentration is too low, we need more tubes (more platelets)
+        if (concentrationTooLow) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
-        } else if (totalPlatelets > maxPlatelets) {
-            // Too many platelets - try with fewer tubes if possible
-            if (tubesNeeded > 1) {
-                tubesNeeded = tubesNeeded - 1;
-                totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
-                
+        }
+        
+        // Priority 2: If platelet count is too low, we need more tubes
+        if (plateletCountTooLow) {
+            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+        }
+        
+        // Priority 3: If platelet count is too high, try fewer tubes if possible
+        if (plateletCountTooHigh && tubesNeeded > 1) {
+            // Calculate what happens with one fewer tube
+            const testTubesNeeded = tubesNeeded - 1;
+            const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
+            const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
+            
+            // Only reduce tubes if we stay above minimum platelet count
+            if (testTotalPlatelets >= minPlatelets) {
                 // Recalculate with fewer tubes
+                tubesNeeded = testTubesNeeded;
+                totalPrpExtractedML = testTotalPrpML;
+                
                 const newTotalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
-                const newIdealFinalVolume = newTotalPlateletsFromPRP / (targetConcentration * 1000);
+                const newIdealVolumeForTargetConc = newTotalPlateletsFromPRP / (targetConcentration * 1000);
+                const newMaxVolumeForMinConc = newTotalPlateletsFromPRP / (OPTIMAL_MIN_PLATELETS_PER_UL * 1000);
+                
+                let newIdealFinalVolume = Math.min(newIdealVolumeForTargetConc, newMaxVolumeForMinConc);
+                newIdealFinalVolume = Math.max(newIdealFinalVolume, minVolume);
+                
                 concentrationPppML = Math.max(0, newIdealFinalVolume - totalPrpExtractedML);
                 
                 const newVolumeAfterDilution = totalPrpExtractedML + concentrationPppML;
