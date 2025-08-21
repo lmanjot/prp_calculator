@@ -22,65 +22,93 @@ const ZONES = {
 const OPTIMAL_MIN_PLATELETS_PER_UL = 1000000;
 const OPTIMAL_MAX_PLATELETS_PER_UL = 1500000;
 
-// Enhanced calculation function to balance both concentration and platelet count targets
+// Optimized calculation function to achieve both concentration and platelet count targets
 function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     const { minPlatelets, maxPlatelets, targetPlatelets, minVolume } = zone;
     const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, finalPppConcentrationPerUL, prpYieldPerTube } = baseConcentrations;
 
-    // A. Start by calculating minimum PRP needed for minimum platelet count
-    const minPrpVolumeForPlatelets = plateletsPerMLofPRP > 0 ? minPlatelets / plateletsPerMLofPRP : 0;
+    // Target concentration: aim for middle of range (1.25M/µL)
+    const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
-    // B. Calculate tubes needed (start with minimum, add iterations for adjustments)
-    let tubesNeeded = prpYieldPerTube > 0 ? Math.ceil(minPrpVolumeForPlatelets / prpYieldPerTube) + iteration : 0;
+    // A. Calculate the optimal volume to hit target platelet count at target concentration
+    const idealVolumeForPlatelets = targetPlatelets / (targetConcentration * 1000); // Convert to mL
     
-    // C. Calculate actual total PRP volume extracted
+    // B. Calculate how much PRP we need to achieve target platelets at target concentration
+    // If we dilute PRP to target concentration, how much PRP do we need?
+    const pureprpPlateletsNeeded = targetPlatelets; // We want this many platelets total
+    let optimalPrpVolumeML = pureprpPlateletsNeeded / (finalPrpConcentrationPerUL * 1000);
+    
+    // C. Calculate tubes needed for this optimal PRP volume
+    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / prpYieldPerTube));
+    
+    // D. Calculate actual PRP volume we'll extract
     let totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
     
-    // D. Calculate total platelets from PRP alone
-    let totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
+    // E. Calculate how much PPP we need to dilute to target concentration
+    // Total platelets from PRP: totalPrpExtractedML * finalPrpConcentrationPerUL * 1000
+    // We want final concentration of targetConcentration
+    // So: totalPlatelets = finalVolume * targetConcentration * 1000
+    // finalVolume = totalPlatelets / (targetConcentration * 1000)
     
-    // E. Check if we exceed maximum platelet count - if so, we need to dilute or reduce
-    if (totalPlateletsFromPRP > maxPlatelets) {
-        // Option 1: Try reducing tubes if possible while staying above minimum
-        const maxPrpVolumeForPlatelets = maxPlatelets / plateletsPerMLofPRP;
-        const maxTubes = Math.floor(maxPrpVolumeForPlatelets / prpYieldPerTube);
-        
-        if (maxTubes >= 1) {
-            tubesNeeded = Math.max(1, maxTubes);
-            totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
-            totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
-        }
-    }
-
-    // F. Calculate PPP needed for concentration control
-    let dilutionPppML = 0;
-    if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
-        const numerator = totalPrpExtractedML * (finalPrpConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL);
-        const denominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
-        if (denominator > 0) {
-            dilutionPppML = numerator / denominator;
-        }
-    }
-
-    // G. Calculate PPP for volume top-up to meet minimum volume
-    const volumeAfterDilution = totalPrpExtractedML + dilutionPppML;
-    const volumeTopUpPppML = Math.max(0, minVolume - volumeAfterDilution);
+    const totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
+    const idealFinalVolume = totalPlateletsFromPRP / (targetConcentration * 1000);
     
-    const totalPppNeededML = dilutionPppML + volumeTopUpPppML;
+    // F. Calculate PPP needed for concentration optimization
+    let concentrationPppML = Math.max(0, idealFinalVolume - totalPrpExtractedML);
+    
+    // G. Ensure we meet minimum volume requirement
+    const volumeAfterConcentrationDilution = totalPrpExtractedML + concentrationPppML;
+    const volumeTopUpPppML = Math.max(0, minVolume - volumeAfterConcentrationDilution);
+    
+    const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
     // H. Calculate final totals
     const totalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
-    // I. Validate both concentration and platelet count ranges
-    const concentrationTooLow = finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL;
-    const plateletCountTooLow = totalPlatelets < minPlatelets;
-    const plateletCountTooHigh = totalPlatelets > maxPlatelets;
-
-    // J. Recursive adjustment if needed
-    if ((concentrationTooLow || plateletCountTooLow) && iteration < 5) {
-        return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+    // I. Check if we're within acceptable ranges
+    const concentrationInRange = finalMixtureConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL && 
+                                finalMixtureConcentration <= OPTIMAL_MAX_PLATELETS_PER_UL;
+    const plateletCountInRange = totalPlatelets >= minPlatelets && totalPlatelets <= maxPlatelets;
+    
+    // J. If we're outside platelet range, adjust tube count and try again
+    if (!plateletCountInRange && iteration < 5) {
+        if (totalPlatelets < minPlatelets) {
+            // Need more platelets - add a tube
+            return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+        } else if (totalPlatelets > maxPlatelets) {
+            // Too many platelets - try with fewer tubes if possible
+            if (tubesNeeded > 1) {
+                tubesNeeded = tubesNeeded - 1;
+                totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
+                
+                // Recalculate with fewer tubes
+                const newTotalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
+                const newIdealFinalVolume = newTotalPlateletsFromPRP / (targetConcentration * 1000);
+                concentrationPppML = Math.max(0, newIdealFinalVolume - totalPrpExtractedML);
+                
+                const newVolumeAfterDilution = totalPrpExtractedML + concentrationPppML;
+                const newVolumeTopUpPppML = Math.max(0, minVolume - newVolumeAfterDilution);
+                
+                const newTotalPppNeededML = concentrationPppML + newVolumeTopUpPppML;
+                const newTotalInjectionVolume = totalPrpExtractedML + newTotalPppNeededML;
+                
+                return {
+                    totalInjectionVolume: newTotalInjectionVolume,
+                    totalPrpExtractedML,
+                    totalPppNeededML: newTotalPppNeededML,
+                    tubesNeeded,
+                    extractVolumePerTube: tubesNeeded > 0 ? newTotalInjectionVolume / tubesNeeded : 0,
+                    finalMixtureConcentration: newTotalInjectionVolume > 0 ? 
+                        ((totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (newTotalPppNeededML * finalPppConcentrationPerUL * 1000)) / (newTotalInjectionVolume * 1000) : 0,
+                    totalPlatelets: (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (newTotalPppNeededML * finalPppConcentrationPerUL * 1000),
+                    concentrationStatus: 'optimal', // Will be recalculated below
+                    plateletCountStatus: 'optimal',  // Will be recalculated below
+                    plateletCountRange: `${(minPlatelets/1e9).toFixed(1)}-${(maxPlatelets/1e9).toFixed(1)}B`
+                };
+            }
+        }
     }
 
     // K. Calculate final metrics
