@@ -114,9 +114,20 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
-    // H. Calculate final totals
-    // Use effective PRP concentration for PRP platelets (what we actually extract)
-    const totalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
+    // H. Calculate final totals with two-tier PPP concentration
+    // First 1ml of PPP has 3x concentration, additional PPP has 1x concentration
+    let totalPppPlatelets = 0;
+    if (totalPppNeededML > 0) {
+        const firstPppML = Math.min(1.0, totalPppNeededML);
+        const additionalPppML = Math.max(0, totalPppNeededML - 1.0);
+        
+        const firstPppConcentration = baselinePlateletsPerUL * 3.0; // 3x for first 1ml
+        const additionalPppConcentration = baselinePlateletsPerUL * 1.0; // 1x for additional
+        
+        totalPppPlatelets = (firstPppML * firstPppConcentration * 1000) + (additionalPppML * additionalPppConcentration * 1000);
+    }
+    
+    const totalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + totalPppPlatelets;
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // I. Check if we're within acceptable ranges
@@ -193,7 +204,7 @@ function calculatePRPDosage(inputData) {
     const patientThrombocytesGL = parseFloat(inputData.thrombocytes || 0);
     const prpYieldPerTube = parseFloat(inputData.prp_yield || 1.0);
     const prpConcentrationX = parseFloat(inputData.prp_concentration || 4.0);
-    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 1.5);
+    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 3.0);
     const recoveryRate = parseFloat(inputData.recovery_rate || 70.0);
     const activationRate = parseFloat(inputData.activation_rate || 20.0);
     
@@ -374,7 +385,7 @@ export default function handler(req, res) {
                     thrombocytes: 200,
                     prp_yield: 1.0,
                     prp_concentration: 4.0,
-                    ppp_concentration: 1.5,
+                    ppp_concentration: 3.0,
                     recovery_rate: 70.0,
                     activation_rate: 20.0
                 },
