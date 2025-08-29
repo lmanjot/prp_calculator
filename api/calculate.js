@@ -34,7 +34,7 @@ const DOUBLE_SPIN_CONFIG = {
 // Optimized calculation function to achieve both concentration and platelet count targets
 function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin = false) {
     const { minPlatelets, maxPlatelets, targetPlatelets, minVolume } = zone;
-    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, finalPppConcentrationPerUL, prpYieldPerTube, baselinePlateletsPerUL, recoveryRate, activationRate, prpConcentrationX } = baseConcentrations;
+    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, prpYieldPerTube, baselinePlateletsPerUL, recoveryRate, activationRate, prpConcentrationX } = baseConcentrations;
     
     // Apply double spin configuration if needed
     let effectivePrpConcentration = finalPrpConcentrationPerUL;
@@ -96,8 +96,10 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         // Only add PPP if PRP concentration is too high
         if (effectivePrpConcentration > OPTIMAL_MAX_PLATELETS_PER_UL) {
             // Calculate dilution needed to bring concentration down to max optimal
+            // Use 3x PPP concentration for dilution calculations (first 1ml)
+            const pppConcentrationForDilution = baselinePlateletsPerUL * 3.0;
             const excessConcentration = effectivePrpConcentration - OPTIMAL_MAX_PLATELETS_PER_UL;
-            const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
+            const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - pppConcentrationForDilution;
             if (dilutionDenominator > 0) {
                 concentrationPppML = (totalPrpExtractedML * excessConcentration) / dilutionDenominator;
             }
@@ -148,18 +150,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 3: If platelet count is too high, try fewer tubes if possible
-        if (plateletCountTooHigh && tubesNeeded > 1) {
-            const testTubesNeeded = tubesNeeded - 1;
-            const testTotalPrpML = testTubesNeeded * effectivePrpYield;
-            const testTotalPlatelets = testTubesNeeded * effectivePrpConcentration * 1000;
-            
-            // Only reduce tubes if we stay above minimum platelet count
-            if (testTotalPlatelets >= minPlatelets) {
-                // Pass negative iteration to indicate we want to reduce tubes
-                return getTreatmentPlan(zone, baseConcentrations, -1);
-            }
-        }
+        // Priority 3: If platelet count is too high, we accept it for now
+        // Tube reduction logic removed to prevent infinite recursion
+        // The system will use the calculated tube count
     }
 
     // K. Calculate final metrics
