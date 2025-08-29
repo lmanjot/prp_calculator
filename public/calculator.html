@@ -600,8 +600,8 @@
                         concentrationEl.classList.add('text-gray-600');
                 }
                 
-                // Update total platelets extracted (using inactivated platelets - what's actually available for treatment)
-                const totalPlateletsB = (zone.inactivated_platelets_per_ul * zone.total_prp_volume_ml / 1000).toFixed(2);
+                // Update total platelets extracted (using the actual extracted platelets from the treatment plan)
+                const totalPlateletsB = (zone.total_platelets_extracted / 1e9).toFixed(2);
                 const plateletEl = document.getElementById(`total-platelets-${zoneKey}`);
                 plateletEl.textContent = `${totalPlateletsB}B`;
                 

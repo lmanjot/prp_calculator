@@ -61,11 +61,11 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
     // A. Start with minimum PRP needed to hit minimum platelet count
-    // BUT: We need to account for the fact that only a percentage of platelets are available for treatment
-    // The effective concentration for treatment planning is based on what's actually available after recovery/activation
-    const effectiveTreatmentConcentration = effectivePlateletsForTreatment * prpConcentrationX;
+    // We need to account for recovery rate: if only X% of platelets are available, we need more volume
+    const recoveryFactor = effectiveRecoveryRate / 100;
+    const adjustedMinPlatelets = minPlatelets / recoveryFactor; // Adjust target to account for recovery loss
     
-    let optimalPrpVolumeML = minPlatelets / (effectiveTreatmentConcentration * 1000);
+    let optimalPrpVolumeML = adjustedMinPlatelets / (effectivePrpConcentration * 1000);
     
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
     let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield) + iteration);
@@ -74,8 +74,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
     
     // D. Calculate total platelets from actual PRP volume
-    // This should be based on the effective treatment concentration, not the raw PRP concentration
-    const totalPlateletsFromPRP = totalPrpExtractedML * effectiveTreatmentConcentration * 1000;
+    // This should be based on the effective PRP concentration (what we actually extract)
+    const totalPlateletsFromPRP = totalPrpExtractedML * effectivePrpConcentration * 1000;
     
     // E. Calculate PPP needed based on concentration and volume constraints
     let concentrationPppML = 0;
@@ -118,8 +118,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
     // H. Calculate final totals
-    // Use effective treatment concentration for PRP platelets (what's actually available)
-    const totalPlatelets = (totalPrpExtractedML * effectiveTreatmentConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
+    // Use effective PRP concentration for PRP platelets (what we actually extract)
+    const totalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // I. Check if we're within acceptable ranges
@@ -144,7 +144,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         if (plateletCountTooHigh && tubesNeeded > 1) {
             const testTubesNeeded = tubesNeeded - 1;
             const testTotalPrpML = testTubesNeeded * effectivePrpYield;
-            const testTotalPlatelets = testTotalPrpML * effectiveTreatmentConcentration * 1000;
+            const testTotalPlatelets = testTubesNeeded * effectivePrpConcentration * 1000;
             
             // Only reduce tubes if we stay above minimum platelet count
             if (testTotalPlatelets >= minPlatelets) {
