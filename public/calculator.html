@@ -373,33 +373,6 @@
                     <p id="feedback-text" class="text-sm leading-relaxed"></p>
                 </div>
                 
-                <div id="recovery-activation-summary" class="mb-8 p-6 rounded-2xl text-center shadow-lg bg-blue-50 border border-blue-200">
-                    <p class="font-bold text-lg mb-4 text-blue-800">Recovery & Activation Summary</p>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                        <div class="text-center">
-                            <p class="text-gray-600 mb-1">Patient Platelets</p>
-                            <p class="text-2xl font-bold text-blue-600" id="patient-platelets-display">0</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-gray-600 mb-1" id="recovered-label">Recovered (70%)</p>
-                            <p class="text-2xl font-bold text-green-600" id="recovered-platelets-display">0</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-gray-600 mb-1" id="inactivated-label">Inactivated (56%)</p>
-                            <p class="text-2xl font-bold text-purple-600" id="inactivated-platelets-display">0</p>
-                            <p class="text-xs text-gray-500">Base for 4x concentration</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-gray-600 mb-1">Initial PRP Concentration</p>
-                            <p class="text-2xl font-bold text-orange-600" id="initial-concentration-display">0 M/µL</p>
-                            <p class="text-xs text-gray-500">Before double spin</p>
-                        </div>
-                    </div>
-                    <p class="text-sm text-blue-700 mt-4">
-                        <strong>Note:</strong> Recovery and activation rates reduce the total available platelets, but the concentration multiplier (4x) still applies to the remaining inactivated platelets. When initial concentration < 1.0M/µL, double spin protocol automatically activates for 7x concentration.
-                    </p>
-                </div>
-                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <!-- Temporal/Crown Result Card -->
                     <div id="result-card-temporal_crown" class="section-card">
@@ -408,6 +381,7 @@
                             <div class="text-center">
                                 <p class="text-sm text-gray-600 mb-2">Blood Tubes</p>
                                 <p class="text-4xl font-black gradient-text" id="tubes-needed-temporal_crown">0</p>
+                                <p class="text-xs text-gray-500" id="tubes-explanation-temporal_crown"></p>
                             </div>
                             <div class="text-center">
                                 <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
@@ -446,6 +420,7 @@
                             <div class="text-center">
                                 <p class="text-sm text-gray-600 mb-2">Blood Tubes</p>
                                 <p class="text-4xl font-black gradient-text" id="tubes-needed-full_scalp">0</p>
+                                <p class="text-xs text-gray-500" id="tubes-explanation-full_scalp"></p>
                             </div>
                             <div class="text-center">
                                 <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
@@ -476,6 +451,33 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <div id="recovery-activation-summary" class="mb-8 p-6 rounded-2xl text-center shadow-lg bg-blue-50 border border-blue-200">
+                    <p class="font-bold text-lg mb-4 text-blue-800">Recovery & Activation Summary</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                        <div class="text-center">
+                            <p class="text-gray-600 mb-1">Patient Platelets</p>
+                            <p class="text-2xl font-bold text-blue-600" id="patient-platelets-display">0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-600 mb-1" id="recovered-label">Recovered (70%)</p>
+                            <p class="text-2xl font-bold text-green-600" id="recovered-platelets-display">0</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-600 mb-1" id="inactivated-label">Inactivated (56%)</p>
+                            <p class="text-2xl font-bold text-purple-600" id="inactivated-platelets-display">0</p>
+                            <p class="text-xs text-gray-500">Base for 4x concentration</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-600 mb-1">Initial PRP Concentration</p>
+                            <p class="text-2xl font-bold text-orange-600" id="initial-concentration-display">0 M/µL</p>
+                            <p class="text-xs text-gray-500">Before double spin</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-blue-700 mt-4">
+                        <strong>Note:</strong> Recovery and activation rates reduce the total available platelets, but the concentration multiplier (4x) still applies to the remaining inactivated platelets. When initial concentration < 1.0M/µL, double spin protocol automatically activates for 7x concentration.
+                    </p>
                 </div>
             </div>
         </div>
@@ -628,6 +630,17 @@
                     protocolEl.textContent = 'Single Spin';
                     protocolEl.className = 'result-value text-blue-600';
                     protocolDetailsEl.textContent = `4x concentration, 1ml/tube`;
+                }
+                
+                // Update tubes explanation
+                const tubesExplanationEl = document.getElementById(`tubes-explanation-${zoneKey}`);
+                if (tubesExplanationEl) {
+                    if (zone.double_spin_used) {
+                        const startingTubes = zone.starting_tubes_needed || zone.tubes_needed * 2;
+                        tubesExplanationEl.textContent = `Start with ${startingTubes} tubes for double spin`;
+                    } else {
+                        tubesExplanationEl.textContent = '';
+                    }
                 }
                 
                 // Note: Result card styling removed - we don't highlight cards based on concentration
