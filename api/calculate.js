@@ -291,14 +291,15 @@ function calculatePRPDosage(inputData) {
         effective_recovery_rate: temporalCrownPlan.effectiveRecoveryRate || recoveryRate
     };
     
-    // Set Full Scalp results by doubling volume requirements and calculating needed tubes
+    // Set Full Scalp results by doubling volume requirements
+    // For Full Scalp, we need double the volume but can extract more per tube
     const fullScalpVolumeNeeded = temporalCrownPlan.totalInjectionVolume * 2; // Double the volume needed
     const fullScalpPrpVolumeNeeded = temporalCrownPlan.totalPrpExtractedML * 2; // Double the PRP needed
     const fullScalpPppVolumeNeeded = temporalCrownPlan.totalPppNeededML * 2; // Double the PPP needed
     
-    // Calculate how many tubes are needed for Full Scalp
-    // If we need double the volume and keep same volume per tube, we need double the tubes
-    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded * 2;
+    // For Full Scalp, we can extract more volume per tube (2ml instead of 1ml)
+    // So we need the same number of tubes but extract double volume per tube
+    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded; // Same tubes needed
     
     results['full_scalp'] = {
         zone_name: ZONES['full_scalp'].name,
@@ -307,7 +308,7 @@ function calculatePRPDosage(inputData) {
         total_injection_volume_ml: Math.round(fullScalpVolumeNeeded * 10) / 10, // Double volume
         total_prp_volume_ml: Math.round(fullScalpPrpVolumeNeeded * 10) / 10, // Double PRP
         total_ppp_needed_ml: Math.round(fullScalpPppVolumeNeeded * 10) / 10, // Double PPP
-        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 10) / 10, // Same volume per tube
+        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 2 * 10) / 10, // Double volume per tube for Full Scalp
         target_platelets: ZONES['full_scalp'].targetPlatelets,
         min_platelets: ZONES['full_scalp'].minPlatelets,
         max_platelets: ZONES['full_scalp'].maxPlatelets,
