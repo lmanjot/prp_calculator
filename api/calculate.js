@@ -70,9 +70,11 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
     let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield));
     
-    // Only add iteration if we're in a recursive call trying to adjust
+    // Handle iteration adjustments: positive for increasing, negative for decreasing
     if (iteration > 0) {
-        tubesNeeded += iteration;
+        tubesNeeded += iteration; // Add tubes for platelet count or concentration issues
+    } else if (iteration < 0) {
+        tubesNeeded = Math.max(1, tubesNeeded + iteration); // Reduce tubes (but not below 1)
     }
     
     // C. Calculate actual PRP volume we'll extract
@@ -148,7 +150,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
             
             // Only reduce tubes if we stay above minimum platelet count
             if (testTotalPlatelets >= minPlatelets) {
-                return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
+                // Pass negative iteration to indicate we want to reduce tubes
+                return getTreatmentPlan(zone, baseConcentrations, -1);
             }
         }
     }
