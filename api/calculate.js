@@ -291,15 +291,23 @@ function calculatePRPDosage(inputData) {
         effective_recovery_rate: temporalCrownPlan.effectiveRecoveryRate || recoveryRate
     };
     
-    // Set Full Scalp results by doubling Temporal/Crown values
+    // Set Full Scalp results by doubling volume requirements and calculating needed tubes
+    const fullScalpVolumeNeeded = temporalCrownPlan.totalInjectionVolume * 2; // Double the volume needed
+    const fullScalpPrpVolumeNeeded = temporalCrownPlan.totalPrpExtractedML * 2; // Double the PRP needed
+    const fullScalpPppVolumeNeeded = temporalCrownPlan.totalPppNeededML * 2; // Double the PPP needed
+    
+    // Calculate how many tubes are needed for Full Scalp
+    // If we need double the volume and keep same volume per tube, we need double the tubes
+    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded * 2;
+    
     results['full_scalp'] = {
         zone_name: ZONES['full_scalp'].name,
-        tubes_needed: useDoubleSpin ? temporalCrownPlan.tubesNeeded * 2 : temporalCrownPlan.tubesNeeded, // Same tubes needed
-        final_tubes_needed: temporalCrownPlan.tubesNeeded, // Same final tubes
-        total_injection_volume_ml: Math.round(temporalCrownPlan.totalInjectionVolume * 2 * 10) / 10, // Double volume
-        total_prp_volume_ml: Math.round(temporalCrownPlan.totalPrpExtractedML * 2 * 10) / 10, // Double PRP
-        total_ppp_needed_ml: Math.round(temporalCrownPlan.totalPppNeededML * 2 * 10) / 10, // Double PPP
-        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 2 * 10) / 10, // Double per tube
+        tubes_needed: useDoubleSpin ? fullScalpTubesNeeded * 2 : fullScalpTubesNeeded, // Calculate actual tubes needed
+        final_tubes_needed: fullScalpTubesNeeded, // Final tubes after double spin
+        total_injection_volume_ml: Math.round(fullScalpVolumeNeeded * 10) / 10, // Double volume
+        total_prp_volume_ml: Math.round(fullScalpPrpVolumeNeeded * 10) / 10, // Double PRP
+        total_ppp_needed_ml: Math.round(fullScalpPppVolumeNeeded * 10) / 10, // Double PPP
+        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 10) / 10, // Same volume per tube
         target_platelets: ZONES['full_scalp'].targetPlatelets,
         min_platelets: ZONES['full_scalp'].minPlatelets,
         max_platelets: ZONES['full_scalp'].maxPlatelets,
