@@ -297,9 +297,9 @@ function calculatePRPDosage(inputData) {
     const fullScalpPrpVolumeNeeded = temporalCrownPlan.totalPrpExtractedML * 2; // Double the PRP needed
     const fullScalpPppVolumeNeeded = temporalCrownPlan.totalPppNeededML * 2; // Double the PPP needed
     
-    // For Full Scalp, we can extract more volume per tube (2ml instead of 1ml)
-    // So we need the same number of tubes but extract double volume per tube
-    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded; // Same tubes needed
+    // For Full Scalp, we need double the volume but can only extract 1ml PRP per tube
+    // So we need double the tubes to get double the PRP volume
+    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded * 2; // Double the tubes needed
     
     results['full_scalp'] = {
         zone_name: ZONES['full_scalp'].name,
@@ -308,7 +308,7 @@ function calculatePRPDosage(inputData) {
         total_injection_volume_ml: Math.round(fullScalpVolumeNeeded * 10) / 10, // Double volume
         total_prp_volume_ml: Math.round(fullScalpPrpVolumeNeeded * 10) / 10, // Double PRP
         total_ppp_needed_ml: Math.round(fullScalpPppVolumeNeeded * 10) / 10, // Double PPP
-        extract_volume_per_tube_ml: Math.round((temporalCrownPlan.extractVolumePerTube * 2) * 10) / 10, // Double volume per tube (2ml total: 1ml PRP + 1ml PPP)
+        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 10) / 10, // Same volume per tube (1ml PRP + PPP to reach target volume)
         target_platelets: ZONES['full_scalp'].targetPlatelets,
         min_platelets: ZONES['full_scalp'].minPlatelets,
         max_platelets: ZONES['full_scalp'].maxPlatelets,
