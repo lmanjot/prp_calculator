@@ -45,6 +45,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         effectivePrpYield = DOUBLE_SPIN_CONFIG.prpYieldPerTube; // 2ml instead of 1ml
     }
     
+    // For single spin, ensure we use the correct concentration
+    // effectivePrpConcentration should be the concentration of platelets in the PRP, not inactivated platelets
+    
     // Calculate effective recovery rate: double spin has 20% lower recovery
     const effectiveRecoveryRate = useDoubleSpin ? recoveryRate * 0.8 : recoveryRate;
     
@@ -65,7 +68,12 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
     
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
-    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield) + iteration);
+    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield));
+    
+    // Only add iteration if we're in a recursive call trying to adjust
+    if (iteration > 0) {
+        tubesNeeded += iteration;
+    }
     
     // C. Calculate actual PRP volume we'll extract
     let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
