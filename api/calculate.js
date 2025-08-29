@@ -239,58 +239,85 @@ function calculatePRPDosage(inputData) {
     
     const results = {};
     
-    // Calculate for each zone using the recursive algorithm
-    Object.keys(ZONES).forEach(zoneKey => {
-        const zone = ZONES[zoneKey];
+    // Calculate for Temporal/Crown zone first (single zone)
+    const temporalCrownZone = ZONES['temporal_crown'];
+    
+    // Check if double spin is needed based on initial concentration
+    const initialConcentration = finalPrpConcentrationPerUL;
+    const useDoubleSpin = DOUBLE_SPIN_CONFIG.enabled && 
+                         initialConcentration < DOUBLE_SPIN_CONFIG.minConcentrationThreshold;
+    
+    // Calculate plan for Temporal/Crown
+    let temporalCrownPlan;
+    if (useDoubleSpin) {
+        // First try with double spin
+        temporalCrownPlan = getTreatmentPlan(temporalCrownZone, baseConcentrations, 0, true);
         
-        // Check if double spin is needed based on initial concentration
-        const initialConcentration = finalPrpConcentrationPerUL;
-        const useDoubleSpin = DOUBLE_SPIN_CONFIG.enabled && 
-                             initialConcentration < DOUBLE_SPIN_CONFIG.minConcentrationThreshold;
-        
-        // If double spin is needed, ensure we use even number of tubes
-        let plan;
-        if (useDoubleSpin) {
-            // First try with double spin
-            plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
-            
-            // Ensure even number of tubes for double spin
-            if (plan.tubesNeeded % 2 !== 0) {
-                plan.tubesNeeded = Math.ceil(plan.tubesNeeded / 2) * 2;
-                // Recalculate with adjusted tube count
-                plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
-            }
-        } else {
-            plan = getTreatmentPlan(zone, baseConcentrations, 0, false);
+        // Ensure even number of tubes for double spin
+        if (temporalCrownPlan.tubesNeeded % 2 !== 0) {
+            temporalCrownPlan.tubesNeeded = Math.ceil(temporalCrownPlan.tubesNeeded / 2) * 2;
+            // Recalculate with adjusted tube count
+            temporalCrownPlan = getTreatmentPlan(temporalCrownZone, baseConcentrations, 0, true);
         }
-        
-        results[zoneKey] = {
-            zone_name: zone.name,
-            tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Show starting tubes needed
-            final_tubes_needed: plan.tubesNeeded, // Final tubes after double spin
-            total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
-            total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
-            total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,
-            extract_volume_per_tube_ml: Math.round(plan.extractVolumePerTube * 10) / 10,
-            target_platelets: zone.targetPlatelets,
-            min_platelets: zone.minPlatelets,
-            max_platelets: zone.maxPlatelets,
-            total_platelets_extracted: Math.round(plan.totalPlatelets),
-            platelet_count_range: plan.plateletCountRange,
-            min_volume_ml: zone.minVolume,
-            final_injection_concentration_per_ul: Math.round(plan.finalMixtureConcentration),
-            final_injection_concentration_millions: Math.round((plan.finalMixtureConcentration / 1000000) * 100) / 100,
-            concentration_status: plan.concentrationStatus,
-            platelet_count_status: plan.plateletCountStatus,
-            double_spin_used: useDoubleSpin,
-            initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100,
-            // Add recovery data for display (now calculated in getTreatmentPlan)
-            recovered_platelets_per_ul: Math.round(plan.recoveredPlateletsPerUL || 0),
-            activated_platelets_per_ul: Math.round(plan.activatedPlateletsPerUL || 0),
-            inactivated_platelets_per_ul: Math.round(plan.inactivatedPlateletsPerUL || 0),
-            effective_recovery_rate: plan.effectiveRecoveryRate || recoveryRate
-        };
-    });
+    } else {
+        temporalCrownPlan = getTreatmentPlan(temporalCrownZone, baseConcentrations, 0, false);
+    }
+    
+    // Set Temporal/Crown results
+    results['temporal_crown'] = {
+        zone_name: temporalCrownZone.name,
+        tubes_needed: useDoubleSpin ? temporalCrownPlan.tubesNeeded * 2 : temporalCrownPlan.tubesNeeded, // Show starting tubes needed
+        final_tubes_needed: temporalCrownPlan.tubesNeeded, // Final tubes after double spin
+        total_injection_volume_ml: Math.round(temporalCrownPlan.totalInjectionVolume * 10) / 10,
+        total_prp_volume_ml: Math.round(temporalCrownPlan.totalPrpExtractedML * 10) / 10,
+        total_ppp_needed_ml: Math.round(temporalCrownPlan.totalPppNeededML * 10) / 10,
+        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 10) / 10,
+        target_platelets: temporalCrownZone.targetPlatelets,
+        min_platelets: temporalCrownZone.minPlatelets,
+        max_platelets: temporalCrownZone.maxPlatelets,
+        total_platelets_extracted: Math.round(temporalCrownPlan.totalPlatelets),
+        platelet_count_range: temporalCrownPlan.plateletCountRange,
+        min_volume_ml: temporalCrownZone.minVolume,
+        final_injection_concentration_per_ul: Math.round(temporalCrownPlan.finalMixtureConcentration),
+        final_injection_concentration_millions: Math.round((temporalCrownPlan.finalMixtureConcentration / 1000000) * 100) / 100,
+        concentration_status: temporalCrownPlan.concentrationStatus,
+        platelet_count_status: temporalCrownPlan.plateletCountStatus,
+        double_spin_used: useDoubleSpin,
+        initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100,
+        // Add recovery data for display (now calculated in getTreatmentPlan)
+        recovered_platelets_per_ul: Math.round(temporalCrownPlan.recoveredPlateletsPerUL || 0),
+        activated_platelets_per_ul: Math.round(temporalCrownPlan.activatedPlateletsPerUL || 0),
+        inactivated_platelets_per_ul: Math.round(temporalCrownPlan.inactivatedPlateletsPerUL || 0),
+        effective_recovery_rate: temporalCrownPlan.effectiveRecoveryRate || recoveryRate
+    };
+    
+    // Set Full Scalp results by doubling Temporal/Crown values
+    results['full_scalp'] = {
+        zone_name: ZONES['full_scalp'].name,
+        tubes_needed: useDoubleSpin ? temporalCrownPlan.tubesNeeded * 2 : temporalCrownPlan.tubesNeeded, // Same tubes needed
+        final_tubes_needed: temporalCrownPlan.tubesNeeded, // Same final tubes
+        total_injection_volume_ml: Math.round(temporalCrownPlan.totalInjectionVolume * 2 * 10) / 10, // Double volume
+        total_prp_volume_ml: Math.round(temporalCrownPlan.totalPrpExtractedML * 2 * 10) / 10, // Double PRP
+        total_ppp_needed_ml: Math.round(temporalCrownPlan.totalPppNeededML * 2 * 10) / 10, // Double PPP
+        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 2 * 10) / 10, // Double per tube
+        target_platelets: ZONES['full_scalp'].targetPlatelets,
+        min_platelets: ZONES['full_scalp'].minPlatelets,
+        max_platelets: ZONES['full_scalp'].maxPlatelets,
+        total_platelets_extracted: Math.round(temporalCrownPlan.totalPlatelets * 2), // Double platelets
+        platelet_count_range: temporalCrownPlan.plateletCountRange.replace('1.0-3.0B', '2.0-5.0B'), // Update range display
+        min_volume_ml: ZONES['full_scalp'].minVolume,
+        final_injection_concentration_per_ul: Math.round(temporalCrownPlan.finalMixtureConcentration), // Same concentration
+        final_injection_concentration_millions: Math.round((temporalCrownPlan.finalMixtureConcentration / 1000000) * 100) / 100, // Same concentration
+        concentration_status: temporalCrownPlan.concentrationStatus, // Same concentration status
+        platelet_count_status: temporalCrownPlan.plateletCountStatus, // Same platelet status
+        double_spin_used: useDoubleSpin, // Same double spin status
+        initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100, // Same initial concentration
+        // Recovery data is the same since it's based on the same protocol
+        recovered_platelets_per_ul: Math.round(temporalCrownPlan.recoveredPlateletsPerUL || 0),
+        activated_platelets_per_ul: Math.round(temporalCrownPlan.activatedPlateletsPerUL || 0),
+        inactivated_platelets_per_ul: Math.round(temporalCrownPlan.inactivatedPlateletsPerUL || 0),
+        effective_recovery_rate: temporalCrownPlan.effectiveRecoveryRate || recoveryRate
+    };
     
     // Generate concentration feedback
     const concentrationMillions = finalPrpConcentrationPerUL / 1000000;
