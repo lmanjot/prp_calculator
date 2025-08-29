@@ -175,7 +175,7 @@ function calculatePRPDosage(inputData) {
         throw new Error("Activation rate must be between 0 and 100");
     }
     
-    // Calculate base concentrations with recovery and activation factors
+    // Calculate base concentrations (concentration is NOT affected by recovery/activation)
     const baselinePlateletsPerUL = patientThrombocytesGL * 1000;
     
     // Apply recovery rate: only this percentage of platelets are actually recovered
@@ -185,10 +185,10 @@ function calculatePRPDosage(inputData) {
     const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
     const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
     
-    // The inactivated platelets are the base for concentration calculations
-    // Concentration multipliers still apply to the inactivated platelet count
-    const finalPrpConcentrationPerUL = inactivatedPlateletsPerUL * prpConcentrationX;
-    const finalPppConcentrationPerUL = inactivatedPlateletsPerUL * pppConcentrationX;
+    // IMPORTANT: Concentration is calculated from ORIGINAL baseline platelets, not reduced ones
+    // Recovery and activation only affect the total available platelet count for treatment
+    const finalPrpConcentrationPerUL = baselinePlateletsPerUL * prpConcentrationX;
+    const finalPppConcentrationPerUL = baselinePlateletsPerUL * pppConcentrationX;
     
     const baseConcentrations = {
         plateletsPerMLofPRP: finalPrpConcentrationPerUL * 1000,
