@@ -106,19 +106,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         // We need to add PPP to reach minimum volume
         const baseVolumeTopUp = minVolume - totalPrpExtractedML;
         
-        // Check what concentration we'd get with minimum PPP addition
-        const testTotalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + 
-                                   (baseVolumeTopUp * finalPppConcentrationPerUL * 1000);
-        const testConcentration = testTotalPlatelets / (minVolume * 1000);
-        
-        // Only add PPP if we have enough platelets AND the concentration stays reasonable
-        // If we already have enough platelets, don't force minimum volume
-        if (totalPlateletsFromPRP >= minPlatelets && testConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL * 0.8) {
-            volumeTopUpPppML = baseVolumeTopUp;
-        } else {
-            // Don't add PPP if it would dilute too much - let the iteration handle this
-            volumeTopUpPppML = 0;
-        }
+        // Always add PPP to reach minimum volume
+        // The concentration check is handled in the iteration logic
+        volumeTopUpPppML = baseVolumeTopUp;
     }
     
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
@@ -142,8 +132,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 2: If concentration is too low, we need more tubes (more platelets)
-        if (concentrationTooLow) {
+        // Priority 2: If concentration is too low AND we don't have enough platelets, we need more tubes
+        // But if we already have enough platelets, don't add tubes just for concentration
+        if (concentrationTooLow && totalPlatelets < minPlatelets) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
