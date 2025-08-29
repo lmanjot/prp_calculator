@@ -15,7 +15,7 @@ const ZONES = {
         minPlatelets: 2.0e9, 
         maxPlatelets: 5.0e9, 
         targetPlatelets: 3.5e9, 
-        minVolume: 4.0 
+        minVolume: 3.0 
     }
 };
 
