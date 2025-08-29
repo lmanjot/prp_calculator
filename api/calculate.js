@@ -111,9 +111,14 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
                                    (baseVolumeTopUp * finalPppConcentrationPerUL * 1000);
         const testConcentration = testTotalPlatelets / (minVolume * 1000);
         
-        // Always add PPP to reach minimum volume, even if concentration goes below optimal
-        // The concentration check is handled in the iteration logic
-        volumeTopUpPppML = baseVolumeTopUp;
+        // Only add PPP if we have enough platelets AND the concentration stays reasonable
+        // If we already have enough platelets, don't force minimum volume
+        if (totalPlateletsFromPRP >= minPlatelets && testConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL * 0.8) {
+            volumeTopUpPppML = baseVolumeTopUp;
+        } else {
+            // Don't add PPP if it would dilute too much - let the iteration handle this
+            volumeTopUpPppML = 0;
+        }
     }
     
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
