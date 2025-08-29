@@ -22,25 +22,43 @@ const ZONES = {
 const OPTIMAL_MIN_PLATELETS_PER_UL = 1000000;
 const OPTIMAL_MAX_PLATELETS_PER_UL = 1500000;
 
+// Double spin protocol configuration
+const DOUBLE_SPIN_CONFIG = {
+    enabled: true,
+    minConcentrationThreshold: 1000000, // 1.0M/µL - threshold to trigger double spin
+    concentrationMultiplier: 7.0, // 7x concentration after double spin
+    prpYieldPerTube: 2.0, // 2ml PRP per tube after double spin
+    requiresEvenTubes: true // Must use 2, 4, 6, etc. tubes
+};
+
 // Optimized calculation function to achieve both concentration and platelet count targets
-function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
+function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin = false) {
     const { minPlatelets, maxPlatelets, targetPlatelets, minVolume } = zone;
     const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, finalPppConcentrationPerUL, prpYieldPerTube } = baseConcentrations;
+    
+    // Apply double spin configuration if needed
+    let effectivePrpConcentration = finalPrpConcentrationPerUL;
+    let effectivePrpYield = prpYieldPerTube;
+    
+    if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+        effectivePrpConcentration = finalPrpConcentrationPerUL * (DOUBLE_SPIN_CONFIG.concentrationMultiplier / 4.0); // Adjust from 4x to 7x
+        effectivePrpYield = DOUBLE_SPIN_CONFIG.prpYieldPerTube; // 2ml instead of 1ml
+    }
 
     // Target concentration: aim for middle of range (1.25M/µL)
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
     // A. Start with minimum PRP needed to hit minimum platelet count
-    let optimalPrpVolumeML = minPlatelets / (finalPrpConcentrationPerUL * 1000);
+    let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
     
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
-    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / prpYieldPerTube) + iteration);
+    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield) + iteration);
     
     // C. Calculate actual PRP volume we'll extract
-    let totalPrpExtractedML = tubesNeeded * prpYieldPerTube;
+    let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
     
     // D. Calculate total platelets from actual PRP volume
-    const totalPlateletsFromPRP = totalPrpExtractedML * finalPrpConcentrationPerUL * 1000;
+    const totalPlateletsFromPRP = totalPrpExtractedML * effectivePrpConcentration * 1000;
     
     // E. Calculate PPP needed based on concentration and volume constraints
     let concentrationPppML = 0;
@@ -52,9 +70,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
         volumeTopUpPppML = 0;
         
         // Only add PPP if PRP concentration is too high
-        if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
+        if (effectivePrpConcentration > OPTIMAL_MAX_PLATELETS_PER_UL) {
             // Calculate dilution needed to bring concentration down to max optimal
-            const excessConcentration = finalPrpConcentrationPerUL - OPTIMAL_MAX_PLATELETS_PER_UL;
+            const excessConcentration = effectivePrpConcentration - OPTIMAL_MAX_PLATELETS_PER_UL;
             const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - finalPppConcentrationPerUL;
             if (dilutionDenominator > 0) {
                 concentrationPppML = (totalPrpExtractedML * excessConcentration) / dilutionDenominator;
@@ -65,7 +83,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
         const baseVolumeTopUp = minVolume - totalPrpExtractedML;
         
         // Check what concentration we'd get with minimum PPP addition
-        const testTotalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + 
+        const testTotalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + 
                                    (baseVolumeTopUp * finalPppConcentrationPerUL * 1000);
         const testConcentration = testTotalPlatelets / (minVolume * 1000);
         
@@ -83,7 +101,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
     // H. Calculate final totals
-    const totalPlatelets = (totalPrpExtractedML * finalPrpConcentrationPerUL * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
+    const totalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // I. Check if we're within acceptable ranges
@@ -107,8 +125,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0) {
         // Priority 3: If platelet count is too high, try fewer tubes if possible
         if (plateletCountTooHigh && tubesNeeded > 1) {
             const testTubesNeeded = tubesNeeded - 1;
-            const testTotalPrpML = testTubesNeeded * prpYieldPerTube;
-            const testTotalPlatelets = testTotalPrpML * finalPrpConcentrationPerUL * 1000;
+            const testTotalPrpML = testTubesNeeded * effectivePrpYield;
+            const testTotalPlatelets = testTotalPrpML * effectivePrpConcentration * 1000;
             
             // Only reduce tubes if we stay above minimum platelet count
             if (testTotalPlatelets >= minPlatelets) {
@@ -153,7 +171,7 @@ function calculatePRPDosage(inputData) {
     // Extract inputs with defaults
     const patientThrombocytesGL = parseFloat(inputData.thrombocytes || 0);
     const prpYieldPerTube = parseFloat(inputData.prp_yield || 1.0);
-    const prpConcentrationX = parseFloat(inputData.prp_concentration || 7.0);
+    const prpConcentrationX = parseFloat(inputData.prp_concentration || 4.0);
     const pppConcentrationX = parseFloat(inputData.ppp_concentration || 0.5);
     const recoveryRate = parseFloat(inputData.recovery_rate || 70.0);
     const activationRate = parseFloat(inputData.activation_rate || 20.0);
@@ -201,25 +219,48 @@ function calculatePRPDosage(inputData) {
     
     // Calculate for each zone using the recursive algorithm
     Object.keys(ZONES).forEach(zoneKey => {
-        const plan = getTreatmentPlan(ZONES[zoneKey], baseConcentrations);
+        const zone = ZONES[zoneKey];
+        
+        // Check if double spin is needed based on initial concentration
+        const initialConcentration = finalPrpConcentrationPerUL;
+        const useDoubleSpin = DOUBLE_SPIN_CONFIG.enabled && 
+                             initialConcentration < DOUBLE_SPIN_CONFIG.minConcentrationThreshold;
+        
+        // If double spin is needed, ensure we use even number of tubes
+        let plan;
+        if (useDoubleSpin) {
+            // First try with double spin
+            plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
+            
+            // Ensure even number of tubes for double spin
+            if (plan.tubesNeeded % 2 !== 0) {
+                plan.tubesNeeded = Math.ceil(plan.tubesNeeded / 2) * 2;
+                // Recalculate with adjusted tube count
+                plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
+            }
+        } else {
+            plan = getTreatmentPlan(zone, baseConcentrations, 0, false);
+        }
         
         results[zoneKey] = {
-            zone_name: ZONES[zoneKey].name,
+            zone_name: zone.name,
             tubes_needed: plan.tubesNeeded,
             total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
             total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,
             extract_volume_per_tube_ml: Math.round(plan.extractVolumePerTube * 10) / 10,
-            target_platelets: ZONES[zoneKey].targetPlatelets,
-            min_platelets: ZONES[zoneKey].minPlatelets,
-            max_platelets: ZONES[zoneKey].maxPlatelets,
+            target_platelets: zone.targetPlatelets,
+            min_platelets: zone.minPlatelets,
+            max_platelets: zone.maxPlatelets,
             total_platelets_extracted: Math.round(plan.totalPlatelets),
             platelet_count_range: plan.plateletCountRange,
-            min_volume_ml: ZONES[zoneKey].minVolume,
+            min_volume_ml: zone.minVolume,
             final_injection_concentration_per_ul: Math.round(plan.finalMixtureConcentration),
             final_injection_concentration_millions: Math.round((plan.finalMixtureConcentration / 1000000) * 100) / 100,
             concentration_status: plan.concentrationStatus,
-            platelet_count_status: plan.plateletCountStatus
+            platelet_count_status: plan.plateletCountStatus,
+            double_spin_used: useDoubleSpin,
+            initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100
         };
     });
     
@@ -229,7 +270,7 @@ function calculatePRPDosage(inputData) {
     let feedbackType, feedbackMessage;
     if (finalPrpConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL) {
         feedbackType = "warning";
-        feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is below the therapeutic window.`;
+        feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is below the therapeutic window. Double spin protocol will be automatically applied to achieve 7x concentration.`;
     } else if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
         feedbackType = "info";
         feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is above optimal range, we dilute with PPP to reduce concentration.`;
@@ -310,12 +351,12 @@ export default function handler(req, res) {
                 example_request: {
                     thrombocytes: 200,
                     prp_yield: 1.0,
-                    prp_concentration: 7.0,
+                    prp_concentration: 4.0,
                     ppp_concentration: 0.5,
                     recovery_rate: 70.0,
                     activation_rate: 20.0
                 },
-                note: "Recovery and activation rates reduce the total available platelets, but concentration multipliers still apply to the remaining inactivated platelets."
+                note: "Recovery and activation rates reduce the total available platelets, but concentration multipliers still apply to the remaining inactivated platelets. Double spin protocol activates when initial concentration < 1.0M/µL."
             });
             return;
         }

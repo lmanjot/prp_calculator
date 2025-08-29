@@ -325,11 +325,11 @@
                     </div>
                     <div class="input-container">
                         <div class="input-with-unit">
-                            <input type="number" id="prp-concentration" class="form-input" value="7" step="0.1" placeholder=" ">
+                            <input type="number" id="prp-concentration" class="form-input" value="4" step="0.1" placeholder=" ">
                             <label for="prp-concentration" class="form-label">PRP Concentration</label>
                             <span class="input-unit">x</span>
                         </div>
-                        <p class="helper-text">Default: 7x</p>
+                        <p class="helper-text">Default: 4x</p>
                     </div>
                     <div class="input-container">
                         <div class="input-with-unit">
@@ -375,7 +375,7 @@
                 
                 <div id="recovery-activation-summary" class="mb-8 p-6 rounded-2xl text-center shadow-lg bg-blue-50 border border-blue-200">
                     <p class="font-bold text-lg mb-4 text-blue-800">Recovery & Activation Summary</p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div class="text-center">
                             <p class="text-gray-600 mb-1">Patient Platelets</p>
                             <p class="text-2xl font-bold text-blue-600" id="patient-platelets-display">0</p>
@@ -387,11 +387,16 @@
                         <div class="text-center">
                             <p class="text-gray-600 mb-1" id="inactivated-label">Inactivated (56%)</p>
                             <p class="text-2xl font-bold text-purple-600" id="inactivated-platelets-display">0</p>
-                            <p class="text-xs text-gray-500">Base for 7x concentration</p>
+                            <p class="text-xs text-gray-500">Base for 4x concentration</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-gray-600 mb-1">Initial PRP Concentration</p>
+                            <p class="text-2xl font-bold text-orange-600" id="initial-concentration-display">0 M/µL</p>
+                            <p class="text-xs text-gray-500">Before double spin</p>
                         </div>
                     </div>
                     <p class="text-sm text-blue-700 mt-4">
-                        <strong>Note:</strong> Recovery and activation rates reduce the total available platelets, but the concentration multiplier (7x) still applies to the remaining inactivated platelets.
+                        <strong>Note:</strong> Recovery and activation rates reduce the total available platelets, but the concentration multiplier (4x) still applies to the remaining inactivated platelets. When initial concentration < 1.0M/µL, double spin protocol automatically activates for 7x concentration.
                     </p>
                 </div>
                 
@@ -426,6 +431,11 @@
                             </div>
                             <span class="result-label">PPP to Add:</span>
                             <span class="result-value" id="ppp-needed-temporal_crown">0 ml</span>
+                            <span class="result-label">Protocol:</span>
+                            <div class="text-right">
+                                <span class="result-value" id="protocol-temporal_crown">Single Spin</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="protocol-details-temporal_crown"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -459,6 +469,11 @@
                             </div>
                             <span class="result-label">PPP to Add:</span>
                             <span class="result-value" id="ppp-needed-full_scalp">0 ml</span>
+                            <span class="result-label">Protocol:</span>
+                            <div class="text-right">
+                                <span class="result-value" id="protocol-full_scalp">Single Spin</span>
+                                <p class="text-xs text-gray-500 -mt-1" id="protocol-details-full_scalp"></p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -601,6 +616,20 @@
                 // Update platelet range display
                 document.getElementById(`platelet-range-${zoneKey}`).textContent = `Target: ${zone.platelet_count_range}`;
                 
+                // Update protocol information
+                const protocolEl = document.getElementById(`protocol-${zoneKey}`);
+                const protocolDetailsEl = document.getElementById(`protocol-details-${zoneKey}`);
+                
+                if (zone.double_spin_used) {
+                    protocolEl.textContent = 'Double Spin';
+                    protocolEl.className = 'result-value text-purple-600 font-bold';
+                    protocolDetailsEl.textContent = `7x concentration, 2ml/tube`;
+                } else {
+                    protocolEl.textContent = 'Single Spin';
+                    protocolEl.className = 'result-value text-blue-600';
+                    protocolDetailsEl.textContent = `4x concentration, 1ml/tube`;
+                }
+                
                 // Note: Result card styling removed - we don't highlight cards based on concentration
                 // since we need to hit the target regardless of concentration status
             });
@@ -629,6 +658,13 @@
                 
                 if (recoveredLabel) recoveredLabel.textContent = `Recovered (${recoveryPercent}%)`;
                 if (inactivatedLabel) inactivatedLabel.textContent = `Inactivated (${inactivatedPercent}%)`;
+                
+                // Update initial concentration display
+                const initialConcentrationDisplay = document.getElementById('initial-concentration-display');
+                if (initialConcentrationDisplay) {
+                    const initialConcentrationM = (calculated_concentrations.final_prp_concentration_per_ul / 1000000).toFixed(2);
+                    initialConcentrationDisplay.textContent = `${initialConcentrationM} M/µL`;
+                }
             } catch (error) {
                 console.error('Error updating recovery/activation summary:', error);
             }
