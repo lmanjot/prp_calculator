@@ -308,7 +308,7 @@ function calculatePRPDosage(inputData) {
         total_injection_volume_ml: Math.round(fullScalpVolumeNeeded * 10) / 10, // Double volume
         total_prp_volume_ml: Math.round(fullScalpPrpVolumeNeeded * 10) / 10, // Double PRP
         total_ppp_needed_ml: Math.round(fullScalpPppVolumeNeeded * 10) / 10, // Double PPP
-        extract_volume_per_tube_ml: Math.round(temporalCrownPlan.extractVolumePerTube * 2 * 10) / 10, // Double volume per tube for Full Scalp
+        extract_volume_per_tube_ml: Math.round((temporalCrownPlan.extractVolumePerTube * 2) * 10) / 10, // Double volume per tube (2ml total: 1ml PRP + 1ml PPP)
         target_platelets: ZONES['full_scalp'].targetPlatelets,
         min_platelets: ZONES['full_scalp'].minPlatelets,
         max_platelets: ZONES['full_scalp'].maxPlatelets,
