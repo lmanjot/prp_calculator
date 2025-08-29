@@ -50,6 +50,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     
     // Calculate how many platelets are actually available for treatment after recovery and activation
     const recoveredPlateletsPerUL = baselinePlateletsPerUL * (effectiveRecoveryRate / 100);
+    const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
     const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
     
     // IMPORTANT: The effective concentration for treatment planning should be based on INACTIVATED platelets
