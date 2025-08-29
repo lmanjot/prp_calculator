@@ -196,13 +196,6 @@ function calculatePRPDosage(inputData) {
     // Calculate base concentrations (concentration is NOT affected by recovery/activation)
     const baselinePlateletsPerUL = patientThrombocytesGL * 1000;
     
-    // Apply recovery rate: only this percentage of platelets are actually recovered
-    const recoveredPlateletsPerUL = baselinePlateletsPerUL * (recoveryRate / 100);
-    
-    // Apply activation rate: this percentage of recovered platelets get activated
-    const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
-    const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
-    
     // IMPORTANT: Concentration is calculated from ORIGINAL baseline platelets, not reduced ones
     // Recovery and activation only affect the total available platelet count for treatment
     const finalPrpConcentrationPerUL = baselinePlateletsPerUL * prpConcentrationX;
@@ -242,6 +235,12 @@ function calculatePRPDosage(inputData) {
             plan = getTreatmentPlan(zone, baseConcentrations, 0, false);
         }
         
+        // Calculate recovery and activation based on the protocol used
+        const effectiveRecoveryRate = useDoubleSpin ? recoveryRate * 0.8 : recoveryRate;
+        const recoveredPlateletsPerUL = baselinePlateletsPerUL * (effectiveRecoveryRate / 100);
+        const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
+        const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
+        
         results[zoneKey] = {
             zone_name: zone.name,
             tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Show starting tubes needed
@@ -261,7 +260,12 @@ function calculatePRPDosage(inputData) {
             concentration_status: plan.concentrationStatus,
             platelet_count_status: plan.plateletCountStatus,
             double_spin_used: useDoubleSpin,
-            initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100
+            initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100,
+            // Add recovery data for display
+            recovered_platelets_per_ul: Math.round(recoveredPlateletsPerUL),
+            activated_platelets_per_ul: Math.round(activatedPlateletsPerUL),
+            inactivated_platelets_per_ul: Math.round(inactivatedPlateletsPerUL),
+            effective_recovery_rate: effectiveRecoveryRate
         };
     });
     
@@ -291,9 +295,7 @@ function calculatePRPDosage(inputData) {
         },
         calculated_concentrations: {
             baseline_platelets_per_ul: baselinePlateletsPerUL,
-            recovered_platelets_per_ul: recoveredPlateletsPerUL,
-            activated_platelets_per_ul: activatedPlateletsPerUL,
-            inactivated_platelets_per_ul: inactivatedPlateletsPerUL,
+            // Note: Recovery data is now calculated per zone since it depends on protocol
             final_prp_concentration_per_ul: finalPrpConcentrationPerUL,
             final_prp_concentration_millions: Math.round(concentrationMillions * 100) / 100,
             final_ppp_concentration_per_ul: finalPppConcentrationPerUL,

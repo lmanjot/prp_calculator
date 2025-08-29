@@ -642,8 +642,13 @@
             // Update recovery and activation summary
             try {
                 const patientPlatelets = (input_parameters.thrombocytes_gl * 1000).toFixed(0);
-                const recoveredPlatelets = calculated_concentrations.recovered_platelets_per_ul.toFixed(0);
-                const inactivatedPlatelets = calculated_concentrations.inactivated_platelets_per_ul.toFixed(0);
+                
+                // Get recovery data from the first zone (they should all have the same recovery data)
+                const firstZoneKey = Object.keys(zones)[0];
+                const firstZone = zones[firstZoneKey];
+                
+                const recoveredPlatelets = firstZone.recovered_platelets_per_ul.toFixed(0);
+                const inactivatedPlatelets = firstZone.inactivated_platelets_per_ul.toFixed(0);
                 
                 // Safely update DOM elements with null checks
                 const patientDisplay = document.getElementById('patient-platelets-display');
@@ -657,18 +662,26 @@
                 if (inactivatedDisplay) inactivatedDisplay.textContent = inactivatedPlatelets;
                 
                 // Update the percentage labels to show actual values
-                const recoveryPercent = input_parameters.recovery_rate_percent;
+                const recoveryPercent = firstZone.effective_recovery_rate;
                 const activationPercent = input_parameters.activation_rate_percent;
                 const inactivatedPercent = ((100 - activationPercent) * recoveryPercent / 100).toFixed(1);
                 
-                if (recoveredLabel) recoveredLabel.textContent = `Recovered (${recoveryPercent}%)`;
+                if (recoveredLabel) recoveredLabel.textContent = `Recovered (${recoveryPercent.toFixed(1)}%)`;
                 if (inactivatedLabel) inactivatedLabel.textContent = `Inactivated (${inactivatedPercent}%)`;
                 
-                // Update initial concentration display
+                // Update initial concentration display with color coding
                 const initialConcentrationDisplay = document.getElementById('initial-concentration-display');
                 if (initialConcentrationDisplay) {
                     const initialConcentrationM = (calculated_concentrations.final_prp_concentration_per_ul / 1000000).toFixed(2);
                     initialConcentrationDisplay.textContent = `${initialConcentrationM} M/µL`;
+                    
+                    // Color code based on concentration status
+                    initialConcentrationDisplay.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600');
+                    if (calculated_concentrations.final_prp_concentration_per_ul >= 1000000) {
+                        initialConcentrationDisplay.classList.add('text-green-600'); // Good concentration
+                    } else {
+                        initialConcentrationDisplay.classList.add('text-red-600'); // Below therapeutic window
+                    }
                 }
             } catch (error) {
                 console.error('Error updating recovery/activation summary:', error);
