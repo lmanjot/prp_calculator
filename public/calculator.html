@@ -657,11 +657,14 @@
 
             // Update recovery and activation summary
             try {
-                const patientPlatelets = (input_parameters.thrombocytes_gl * 1000).toFixed(0);
-                
                 // Get recovery data from the first zone (they should all have the same recovery data)
                 const firstZoneKey = Object.keys(zones)[0];
                 const firstZone = zones[firstZoneKey];
+                
+                // Calculate total platelets based on actual blood volume that will be drawn
+                // Standard blood tube is 10ml, so total blood volume = tubes_needed × 10ml
+                const bloodVolumeML = firstZone.tubes_needed * 10; // 10ml per tube
+                const totalPatientPlatelets = (input_parameters.thrombocytes_gl * 1000 * bloodVolumeML * 1000).toFixed(0);
                 
                 const recoveredPlatelets = firstZone.recovered_platelets_per_ul.toFixed(0);
                 const inactivatedPlatelets = firstZone.inactivated_platelets_per_ul.toFixed(0);
@@ -674,7 +677,7 @@
                 const inactivatedLabel = document.getElementById('inactivated-label');
                 
                 // Convert to Millions for display
-                const patientPlateletsM = (parseFloat(patientPlatelets) / 1000000).toFixed(2);
+                const patientPlateletsM = (parseFloat(totalPatientPlatelets) / 1000000).toFixed(2);
                 const recoveredPlateletsM = (parseFloat(recoveredPlatelets) / 1000000).toFixed(2);
                 const inactivatedPlateletsM = (parseFloat(inactivatedPlatelets) / 1000000).toFixed(2);
                 
