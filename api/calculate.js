@@ -34,7 +34,7 @@ const DOUBLE_SPIN_CONFIG = {
 // Optimized calculation function to achieve both concentration and platelet count targets
 function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin = false) {
     const { minPlatelets, maxPlatelets, targetPlatelets, minVolume } = zone;
-    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, finalPppConcentrationPerUL, prpYieldPerTube } = baseConcentrations;
+    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, finalPppConcentrationPerUL, prpYieldPerTube, baselinePlateletsPerUL, recoveryRate, activationRate, prpConcentrationX } = baseConcentrations;
     
     // Apply double spin configuration if needed
     let effectivePrpConcentration = finalPrpConcentrationPerUL;
@@ -44,12 +44,27 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         effectivePrpConcentration = finalPrpConcentrationPerUL * (DOUBLE_SPIN_CONFIG.concentrationMultiplier / 4.0); // Adjust from 4x to 7x
         effectivePrpYield = DOUBLE_SPIN_CONFIG.prpYieldPerTube; // 2ml instead of 1ml
     }
+    
+    // Calculate effective recovery rate: double spin has 20% lower recovery
+    const effectiveRecoveryRate = useDoubleSpin ? recoveryRate * 0.8 : recoveryRate;
+    
+    // Calculate how many platelets are actually available for treatment after recovery and activation
+    const recoveredPlateletsPerUL = baselinePlateletsPerUL * (effectiveRecoveryRate / 100);
+    const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
+    
+    // IMPORTANT: The effective concentration for treatment planning should be based on INACTIVATED platelets
+    // This represents what's actually available for injection
+    const effectivePlateletsForTreatment = inactivatedPlateletsPerUL;
 
     // Target concentration: aim for middle of range (1.25M/µL)
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
     // A. Start with minimum PRP needed to hit minimum platelet count
-    let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
+    // BUT: We need to account for the fact that only a percentage of platelets are available for treatment
+    // The effective concentration for treatment planning is based on what's actually available after recovery/activation
+    const effectiveTreatmentConcentration = effectivePlateletsForTreatment * prpConcentrationX;
+    
+    let optimalPrpVolumeML = minPlatelets / (effectiveTreatmentConcentration * 1000);
     
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
     let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield) + iteration);
@@ -58,7 +73,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
     
     // D. Calculate total platelets from actual PRP volume
-    const totalPlateletsFromPRP = totalPrpExtractedML * effectivePrpConcentration * 1000;
+    // This should be based on the effective treatment concentration, not the raw PRP concentration
+    const totalPlateletsFromPRP = totalPrpExtractedML * effectiveTreatmentConcentration * 1000;
     
     // E. Calculate PPP needed based on concentration and volume constraints
     let concentrationPppML = 0;
@@ -101,7 +117,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
 
     // H. Calculate final totals
-    const totalPlatelets = (totalPrpExtractedML * effectivePrpConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
+    // Use effective treatment concentration for PRP platelets (what's actually available)
+    const totalPlatelets = (totalPrpExtractedML * effectiveTreatmentConcentration * 1000) + (totalPppNeededML * finalPppConcentrationPerUL * 1000);
     const finalMixtureConcentration = totalInjectionVolume > 0 ? totalPlatelets / (totalInjectionVolume * 1000) : 0;
 
     // I. Check if we're within acceptable ranges
@@ -126,7 +143,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         if (plateletCountTooHigh && tubesNeeded > 1) {
             const testTubesNeeded = tubesNeeded - 1;
             const testTotalPrpML = testTubesNeeded * effectivePrpYield;
-            const testTotalPlatelets = testTotalPrpML * effectivePrpConcentration * 1000;
+            const testTotalPlatelets = testTotalPrpML * effectiveTreatmentConcentration * 1000;
             
             // Only reduce tubes if we stay above minimum platelet count
             if (testTotalPlatelets >= minPlatelets) {
@@ -163,7 +180,12 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         totalPlatelets,
         concentrationStatus,
         plateletCountStatus,
-        plateletCountRange: `${(minPlatelets/1e9).toFixed(1)}-${(maxPlatelets/1e9).toFixed(1)}B`
+        plateletCountRange: `${(minPlatelets/1e9).toFixed(1)}-${(maxPlatelets/1e9).toFixed(1)}B`,
+        // Add recovery data for display
+        recoveredPlateletsPerUL,
+        activatedPlateletsPerUL,
+        inactivatedPlateletsPerUL,
+        effectiveRecoveryRate
     };
 }
 
@@ -205,7 +227,11 @@ function calculatePRPDosage(inputData) {
         plateletsPerMLofPRP: finalPrpConcentrationPerUL * 1000,
         finalPrpConcentrationPerUL,
         finalPppConcentrationPerUL,
-        prpYieldPerTube
+        prpYieldPerTube,
+        baselinePlateletsPerUL,
+        recoveryRate,
+        activationRate,
+        prpConcentrationX
     };
     
     const results = {};
@@ -235,12 +261,6 @@ function calculatePRPDosage(inputData) {
             plan = getTreatmentPlan(zone, baseConcentrations, 0, false);
         }
         
-        // Calculate recovery and activation based on the protocol used
-        const effectiveRecoveryRate = useDoubleSpin ? recoveryRate * 0.8 : recoveryRate;
-        const recoveredPlateletsPerUL = baselinePlateletsPerUL * (effectiveRecoveryRate / 100);
-        const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
-        const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
-        
         results[zoneKey] = {
             zone_name: zone.name,
             tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Show starting tubes needed
@@ -261,11 +281,11 @@ function calculatePRPDosage(inputData) {
             platelet_count_status: plan.plateletCountStatus,
             double_spin_used: useDoubleSpin,
             initial_concentration: Math.round(initialConcentration / 1000000 * 100) / 100,
-            // Add recovery data for display
-            recovered_platelets_per_ul: Math.round(recoveredPlateletsPerUL),
-            activated_platelets_per_ul: Math.round(activatedPlateletsPerUL),
-            inactivated_platelets_per_ul: Math.round(inactivatedPlateletsPerUL),
-            effective_recovery_rate: effectiveRecoveryRate
+            // Add recovery data for display (now calculated in getTreatmentPlan)
+            recovered_platelets_per_ul: Math.round(plan.recoveredPlateletsPerUL || 0),
+            activated_platelets_per_ul: Math.round(plan.activatedPlateletsPerUL || 0),
+            inactivated_platelets_per_ul: Math.round(plan.inactivatedPlateletsPerUL || 0),
+            effective_recovery_rate: plan.effectiveRecoveryRate || recoveryRate
         };
     });
     
