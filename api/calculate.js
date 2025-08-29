@@ -244,8 +244,8 @@ function calculatePRPDosage(inputData) {
         
         results[zoneKey] = {
             zone_name: zone.name,
-            tubes_needed: plan.tubesNeeded,
-            starting_tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // For double spin, show starting tubes
+            tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Show starting tubes needed
+            final_tubes_needed: plan.tubesNeeded, // Final tubes after double spin
             total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
             total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,

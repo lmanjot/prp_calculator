@@ -453,6 +453,8 @@
                     </div>
                 </div>
                 
+                <div class="mt-12"></div>
+                
                 <div id="recovery-activation-summary" class="mb-8 p-6 rounded-2xl text-center shadow-lg bg-blue-50 border border-blue-200">
                     <p class="font-bold text-lg mb-4 text-blue-800">Recovery & Activation Summary</p>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
@@ -564,7 +566,7 @@
             Object.keys(zones).forEach(zoneKey => {
                 const zone = zones[zoneKey];
                 const explanationText = zone.tubes_needed > 0 ? 
-                    `(${zone.tubes_needed} tube${zone.tubes_needed > 1 ? 's' : ''} × ${input_parameters.prp_yield_ml.toFixed(1)} ml)` : '';
+                    `(${zone.tubes_needed} tube${zone.tubes_needed > 1 ? 's' : ''} × ${zone.extract_volume_per_tube_ml.toFixed(1)} ml)` : '';
 
                 // Update the UI for the specific zone card
                 document.getElementById(`total-volume-display-${zoneKey}`).textContent = `${zone.total_injection_volume_ml} ml`;
@@ -625,21 +627,20 @@
                 if (zone.double_spin_used) {
                     protocolEl.textContent = 'Double Spin';
                     protocolEl.className = 'result-value text-purple-600 font-bold';
-                    protocolDetailsEl.textContent = `7x concentration, 2ml/tube`;
+                    protocolDetailsEl.textContent = `Double spin`;
                 } else {
                     protocolEl.textContent = 'Single Spin';
                     protocolEl.className = 'result-value text-blue-600';
-                    protocolDetailsEl.textContent = `4x concentration, 1ml/tube`;
+                    protocolDetailsEl.textContent = `Single spin`;
                 }
                 
                 // Update tubes explanation
                 const tubesExplanationEl = document.getElementById(`tubes-explanation-${zoneKey}`);
                 if (tubesExplanationEl) {
                     if (zone.double_spin_used) {
-                        const startingTubes = zone.starting_tubes_needed || zone.tubes_needed * 2;
-                        tubesExplanationEl.textContent = `Start with ${startingTubes} tubes for double spin`;
+                        tubesExplanationEl.textContent = `${zone.final_tubes_needed} tube${zone.final_tubes_needed > 1 ? 's' : ''} double-spinned`;
                     } else {
-                        tubesExplanationEl.textContent = '';
+                        tubesExplanationEl.textContent = `${zone.tubes_needed} tube${zone.tubes_needed > 1 ? 's' : ''}`;
                     }
                 }
                 
