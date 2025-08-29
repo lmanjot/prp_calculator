@@ -381,11 +381,11 @@
                             <p class="text-2xl font-bold text-blue-600" id="patient-platelets-display">0</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-gray-600 mb-1">Recovered (70%)</p>
+                            <p class="text-gray-600 mb-1" id="recovered-label">Recovered (70%)</p>
                             <p class="text-2xl font-bold text-green-600" id="recovered-platelets-display">0</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-gray-600 mb-1">Inactivated (56%)</p>
+                            <p class="text-gray-600 mb-1" id="inactivated-label">Inactivated (56%)</p>
                             <p class="text-2xl font-bold text-purple-600" id="inactivated-platelets-display">0</p>
                             <p class="text-xs text-gray-500">Base for calculations</p>
                         </div>
@@ -533,6 +533,12 @@
         // --- UI UPDATE FUNCTIONS ---
         function updateUIWithResults(data) {
             const { zones, concentration_feedback, input_parameters, calculated_concentrations } = data;
+            
+            // Validate required data
+            if (!calculated_concentrations) {
+                console.error('Missing calculated_concentrations in data:', data);
+                return;
+            }
 
             // Update each zone's results
             Object.keys(zones).forEach(zoneKey => {
@@ -597,21 +603,32 @@
             });
 
             // Update recovery and activation summary
-            const patientPlatelets = (input_parameters.thrombocytes_gl * 1000).toFixed(0);
-            const recoveredPlatelets = calculated_concentrations.recovered_platelets_per_ul.toFixed(0);
-            const inactivatedPlatelets = calculated_concentrations.inactivated_platelets_per_ul.toFixed(0);
-            
-            document.getElementById('patient-platelets-display').textContent = patientPlatelets;
-            document.getElementById('recovered-platelets-display').textContent = recoveredPlatelets;
-            document.getElementById('inactivated-platelets-display').textContent = inactivatedPlatelets;
-            
-            // Update the percentage labels to show actual values
-            const recoveryPercent = input_parameters.recovery_rate_percent;
-            const activationPercent = input_parameters.activation_rate_percent;
-            const inactivatedPercent = ((100 - activationPercent) * recoveryPercent / 100).toFixed(1);
-            
-            document.querySelector('#recovery-activation-summary .text-gray-600:nth-child(2)').textContent = `Recovered (${recoveryPercent}%)`;
-            document.querySelector('#recovery-activation-summary .text-gray-600:nth-child(3)').textContent = `Inactivated (${inactivatedPercent}%)`;
+            try {
+                const patientPlatelets = (input_parameters.thrombocytes_gl * 1000).toFixed(0);
+                const recoveredPlatelets = calculated_concentrations.recovered_platelets_per_ul.toFixed(0);
+                const inactivatedPlatelets = calculated_concentrations.inactivated_platelets_per_ul.toFixed(0);
+                
+                // Safely update DOM elements with null checks
+                const patientDisplay = document.getElementById('patient-platelets-display');
+                const recoveredDisplay = document.getElementById('recovered-platelets-display');
+                const inactivatedDisplay = document.getElementById('inactivated-platelets-display');
+                const recoveredLabel = document.getElementById('recovered-label');
+                const inactivatedLabel = document.getElementById('inactivated-label');
+                
+                if (patientDisplay) patientDisplay.textContent = patientPlatelets;
+                if (recoveredDisplay) recoveredDisplay.textContent = recoveredPlatelets;
+                if (inactivatedDisplay) inactivatedDisplay.textContent = inactivatedPlatelets;
+                
+                // Update the percentage labels to show actual values
+                const recoveryPercent = input_parameters.recovery_rate_percent;
+                const activationPercent = input_parameters.activation_rate_percent;
+                const inactivatedPercent = ((100 - activationPercent) * recoveryPercent / 100).toFixed(1);
+                
+                if (recoveredLabel) recoveredLabel.textContent = `Recovered (${recoveryPercent}%)`;
+                if (inactivatedLabel) inactivatedLabel.textContent = `Inactivated (${inactivatedPercent}%)`;
+            } catch (error) {
+                console.error('Error updating recovery/activation summary:', error);
+            }
             
             // Update concentration feedback
             const feedback = concentration_feedback;
