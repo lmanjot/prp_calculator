@@ -132,9 +132,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 2: If concentration is too low AND we don't have enough platelets, we need more tubes
-        // But if we already have enough platelets, don't add tubes just for concentration
-        if (concentrationTooLow && totalPlatelets < minPlatelets) {
+        // Priority 2: If concentration is too low, we need more tubes (more platelets)
+        if (concentrationTooLow) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
@@ -194,7 +193,7 @@ function calculatePRPDosage(inputData) {
     const patientThrombocytesGL = parseFloat(inputData.thrombocytes || 0);
     const prpYieldPerTube = parseFloat(inputData.prp_yield || 1.0);
     const prpConcentrationX = parseFloat(inputData.prp_concentration || 4.0);
-    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 0.5);
+    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 1.5);
     const recoveryRate = parseFloat(inputData.recovery_rate || 70.0);
     const activationRate = parseFloat(inputData.activation_rate || 20.0);
     
@@ -375,7 +374,7 @@ export default function handler(req, res) {
                     thrombocytes: 200,
                     prp_yield: 1.0,
                     prp_concentration: 4.0,
-                    ppp_concentration: 0.5,
+                    ppp_concentration: 1.5,
                     recovery_rate: 70.0,
                     activation_rate: 20.0
                 },
