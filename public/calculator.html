@@ -614,8 +614,16 @@
                         concentrationEl.classList.add('text-gray-600');
                 }
                 
-                // Update total platelets extracted (using the actual extracted platelets from the treatment plan)
-                const totalPlateletsB = (zone.total_platelets_extracted / 1e9).toFixed(2);
+                // Update total platelets extracted (using inactivated platelets - what's actually available for treatment)
+                // Calculate based on the same logic as the recovery summary
+                const bloodVolumeML = zone.tubes_needed * 10; // 10ml per tube
+                const totalPatientPlatelets = input_parameters.thrombocytes_gl * 1000 * bloodVolumeML * 1000;
+                const recoveryRate = zone.effective_recovery_rate / 100;
+                const activationRate = input_parameters.activation_rate_percent / 100;
+                const totalRecoveredPlatelets = totalPatientPlatelets * recoveryRate;
+                const totalInactivatedPlatelets = totalRecoveredPlatelets * (1 - activationRate);
+                
+                const totalPlateletsB = (totalInactivatedPlatelets / 1e9).toFixed(2);
                 const plateletEl = document.getElementById(`total-platelets-${zoneKey}`);
                 plateletEl.textContent = `${totalPlateletsB}B`;
                 
