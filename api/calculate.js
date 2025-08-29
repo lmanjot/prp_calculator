@@ -109,14 +109,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
                                    (baseVolumeTopUp * finalPppConcentrationPerUL * 1000);
         const testConcentration = testTotalPlatelets / (minVolume * 1000);
         
-        if (testConcentration >= OPTIMAL_MIN_PLATELETS_PER_UL) {
-            // Adding minimum PPP keeps us above minimum concentration
-            volumeTopUpPppML = baseVolumeTopUp;
-        } else {
-            // Even minimum PPP addition puts us below minimum concentration
-            // This means we need more PRP (more tubes) - let the iteration handle this
-            volumeTopUpPppML = baseVolumeTopUp;
-        }
+        // Always add PPP to reach minimum volume, even if concentration goes below optimal
+        // The concentration check is handled in the iteration logic
+        volumeTopUpPppML = baseVolumeTopUp;
     }
     
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
@@ -133,15 +128,15 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const plateletCountTooLow = totalPlatelets < minPlatelets;
     const plateletCountTooHigh = totalPlatelets > maxPlatelets;
     
-    // J. Adjust tube count if needed - PRIORITIZE CONCENTRATION OVER PLATELET COUNT
+    // J. Adjust tube count if needed - PRIORITIZE PLATELET COUNT OVER CONCENTRATION
     if (iteration < 3) { // Reduce iterations to avoid infinite loops
-        // Priority 1: If concentration is too low, we need more tubes (more platelets)
-        if (concentrationTooLow) {
+        // Priority 1: If platelet count is too low, we need more tubes
+        if (plateletCountTooLow) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
-        // Priority 2: If platelet count is too low, we need more tubes
-        if (plateletCountTooLow) {
+        // Priority 2: If concentration is too low, we need more tubes (more platelets)
+        if (concentrationTooLow) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
