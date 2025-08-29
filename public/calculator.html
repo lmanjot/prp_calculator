@@ -666,8 +666,12 @@
                 const bloodVolumeML = firstZone.tubes_needed * 10; // 10ml per tube
                 const totalPatientPlatelets = (input_parameters.thrombocytes_gl * 1000 * bloodVolumeML * 1000).toFixed(0);
                 
-                const recoveredPlatelets = firstZone.recovered_platelets_per_ul.toFixed(0);
-                const inactivatedPlatelets = firstZone.inactivated_platelets_per_ul.toFixed(0);
+                // Calculate recovered and inactivated platelets based on total blood volume
+                const recoveryRate = firstZone.effective_recovery_rate / 100;
+                const activationRate = input_parameters.activation_rate_percent / 100;
+                
+                const totalRecoveredPlatelets = (totalPatientPlatelets * recoveryRate).toFixed(0);
+                const totalInactivatedPlatelets = (totalRecoveredPlatelets * (1 - activationRate)).toFixed(0);
                 
                 // Safely update DOM elements with null checks
                 const patientDisplay = document.getElementById('patient-platelets-display');
@@ -676,14 +680,14 @@
                 const recoveredLabel = document.getElementById('recovered-label');
                 const inactivatedLabel = document.getElementById('inactivated-label');
                 
-                // Convert to Millions for display
-                const patientPlateletsM = (parseFloat(totalPatientPlatelets) / 1000000).toFixed(2);
-                const recoveredPlateletsM = (parseFloat(recoveredPlatelets) / 1000000).toFixed(2);
-                const inactivatedPlateletsM = (parseFloat(inactivatedPlatelets) / 1000000).toFixed(2);
+                // Convert to Billions for display
+                const patientPlateletsB = (parseFloat(totalPatientPlatelets) / 1000000000).toFixed(2);
+                const recoveredPlateletsB = (parseFloat(totalRecoveredPlatelets) / 1000000000).toFixed(2);
+                const inactivatedPlateletsB = (parseFloat(totalInactivatedPlatelets) / 1000000000).toFixed(2);
                 
-                if (patientDisplay) patientDisplay.textContent = `${patientPlateletsM}M`;
-                if (recoveredDisplay) recoveredDisplay.textContent = `${recoveredPlateletsM}M`;
-                if (inactivatedDisplay) inactivatedDisplay.textContent = `${inactivatedPlateletsM}M`;
+                if (patientDisplay) patientDisplay.textContent = `${patientPlateletsB}B`;
+                if (recoveredDisplay) recoveredDisplay.textContent = `${recoveredPlateletsB}B`;
+                if (inactivatedDisplay) inactivatedDisplay.textContent = `${inactivatedPlateletsB}B`;
                 
                 // Update the percentage labels to show actual values
                 const recoveryPercent = firstZone.effective_recovery_rate;
