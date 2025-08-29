@@ -185,7 +185,8 @@ function calculatePRPDosage(inputData) {
     const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
     const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
     
-    // The inactivated platelets are the base for our calculations
+    // The inactivated platelets are the base for concentration calculations
+    // Concentration multipliers still apply to the inactivated platelet count
     const finalPrpConcentrationPerUL = inactivatedPlateletsPerUL * prpConcentrationX;
     const finalPppConcentrationPerUL = inactivatedPlateletsPerUL * pppConcentrationX;
     
@@ -313,7 +314,8 @@ export default function handler(req, res) {
                     ppp_concentration: 0.5,
                     recovery_rate: 70.0,
                     activation_rate: 20.0
-                }
+                },
+                note: "Recovery and activation rates reduce the total available platelets, but concentration multipliers still apply to the remaining inactivated platelets."
             });
             return;
         }
