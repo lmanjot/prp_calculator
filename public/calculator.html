@@ -379,15 +379,15 @@
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Temporal / Crown</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Blood Tubes Single Spin</p>
+                                <p class="text-sm text-gray-600 mb-2">Starting Blood Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-temporal_crown">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Blood Tubes Double Spin</p>
+                                <p class="text-sm text-gray-600 mb-2">Final Tubes After Processing</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-temporal_crown">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Extract per Double Spinned Tube</p>
+                                <p class="text-sm text-gray-600 mb-2">Extract per Final Tube</p>
                                 <p class="text-2xl font-black gradient-text" id="extract-per-tube-temporal_crown">0 ml</p>
                             </div>
                         </div>
@@ -418,15 +418,15 @@
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Full Scalp</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Blood Tubes Single Spin</p>
+                                <p class="text-sm text-gray-600 mb-2">Starting Blood Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-full_scalp">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Blood Tubes Double Spin</p>
+                                <p class="text-sm text-gray-600 mb-2">Final Tubes After Processing</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-full_scalp">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Extract per Double Spinned Tube</p>
+                                <p class="text-sm text-gray-600 mb-2">Extract per Final Tube</p>
                                 <p class="text-2xl font-black gradient-text" id="extract-per-tube-full_scalp">0 ml</p>
                             </div>
                         </div>
@@ -573,9 +573,11 @@
                 document.getElementById(`prp-needed-${zoneKey}`).textContent = `${zone.total_prp_volume_ml} ml`;
                 document.getElementById(`ppp-needed-${zoneKey}`).textContent = `${zone.total_ppp_needed_ml} ml`;
                 
-                // Update blood tubes display - show both single spin and double spin counts
-                document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.double_spin_used ? Math.ceil(zone.tubes_needed / 2) : zone.tubes_needed;
-                document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.double_spin_used ? zone.final_tubes_needed : 0;
+                // Update blood tubes display - show both starting and final tube counts
+                // Starting tubes: always shows the total tubes needed to start with
+                // Final tubes: shows final tubes after processing (1 for double spin, same as starting for single spin)
+                document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed;
+                document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.double_spin_used ? zone.final_tubes_needed : zone.tubes_needed;
                 
                 document.getElementById(`prp-explanation-${zoneKey}`).textContent = explanationText;
                 document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${zone.extract_volume_per_tube_ml} ml`;
