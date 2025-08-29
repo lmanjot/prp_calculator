@@ -627,24 +627,36 @@
                 const plateletEl = document.getElementById(`total-platelets-${zoneKey}`);
                 plateletEl.textContent = `${totalPlateletsB}B`;
                 
-                // Color code platelets based on range status
+                // Color code platelets based on whether we're within target range
                 plateletEl.classList.remove('text-green-600', 'text-yellow-600', 'text-red-600');
-                switch (zone.platelet_count_status) {
-                    case 'optimal':
-                        plateletEl.classList.add('text-green-600', 'font-bold');
-                        break;
-                    case 'above_max':
-                        plateletEl.classList.add('text-yellow-600', 'font-bold');
-                        break;
-                    case 'below_min':
-                        plateletEl.classList.add('text-red-600', 'font-bold');
-                        break;
-                    default:
-                        plateletEl.classList.add('text-gray-600');
+                
+                // Get the target range for this zone
+                let minTarget, maxTarget;
+                if (zoneKey === 'temporal_crown') {
+                    minTarget = 1.5e9; // 1.5B
+                    maxTarget = 5.0e9; // 5.0B
+                } else if (zoneKey === 'full_scalp') {
+                    minTarget = 3.0e9; // 3.0B
+                    maxTarget = 10.0e9; // 10.0B
                 }
                 
-                // Update platelet range display
-                document.getElementById(`platelet-range-${zoneKey}`).textContent = `Target: ${zone.platelet_count_range}`;
+                // Check if inactivated platelets are within target range
+                if (totalInactivatedPlatelets >= minTarget && totalInactivatedPlatelets <= maxTarget) {
+                    plateletEl.classList.add('text-green-600', 'font-bold'); // Within range
+                } else if (totalInactivatedPlatelets > maxTarget) {
+                    plateletEl.classList.add('text-yellow-600', 'font-bold'); // Above range
+                } else {
+                    plateletEl.classList.add('text-red-600', 'font-bold'); // Below range
+                }
+                
+                // Update platelet range display with new target ranges
+                let targetRangeText;
+                if (zoneKey === 'temporal_crown') {
+                    targetRangeText = 'Target: 1.5-5.0B';
+                } else if (zoneKey === 'full_scalp') {
+                    targetRangeText = 'Target: 3.0-10.0B';
+                }
+                document.getElementById(`platelet-range-${zoneKey}`).textContent = targetRangeText;
                 
                 // Update protocol information
                 const protocolEl = document.getElementById(`protocol-${zoneKey}`);
