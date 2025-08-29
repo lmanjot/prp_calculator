@@ -614,16 +614,8 @@
                         concentrationEl.classList.add('text-gray-600');
                 }
                 
-                // Update total platelets extracted (using inactivated platelets - what's actually available for treatment)
-                // Calculate based on the same logic as the recovery summary
-                const bloodVolumeML = zone.tubes_needed * 10; // 10ml per tube
-                const totalPatientPlatelets = input_parameters.thrombocytes_gl * 1000 * bloodVolumeML * 1000;
-                const recoveryRate = zone.effective_recovery_rate / 100;
-                const activationRate = input_parameters.activation_rate_percent / 100;
-                const totalRecoveredPlatelets = totalPatientPlatelets * recoveryRate;
-                const totalInactivatedPlatelets = totalRecoveredPlatelets * (1 - activationRate);
-                
-                const totalPlateletsB = (totalInactivatedPlatelets / 1e9).toFixed(2);
+                // Update total platelets extracted (use the backend calculated value)
+                const totalPlateletsB = (zone.total_platelets_extracted / 1e9).toFixed(2);
                 const plateletEl = document.getElementById(`total-platelets-${zoneKey}`);
                 plateletEl.textContent = `${totalPlateletsB}B`;
                 
@@ -640,10 +632,10 @@
                     maxTarget = 10.0e9; // 10.0B
                 }
                 
-                // Check if inactivated platelets are within target range
-                if (totalInactivatedPlatelets >= minTarget && totalInactivatedPlatelets <= maxTarget) {
+                // Check if extracted platelets are within target range
+                if (zone.total_platelets_extracted >= minTarget && zone.total_platelets_extracted <= maxTarget) {
                     plateletEl.classList.add('text-green-600', 'font-bold'); // Within range
-                } else if (totalInactivatedPlatelets > maxTarget) {
+                } else if (zone.total_platelets_extracted > maxTarget) {
                     plateletEl.classList.add('text-yellow-600', 'font-bold'); // Above range
                 } else {
                     plateletEl.classList.add('text-red-600', 'font-bold'); // Below range
