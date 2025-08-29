@@ -61,11 +61,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
     // A. Start with minimum PRP needed to hit minimum platelet count
-    // We need to account for recovery rate: if only X% of platelets are available, we need more volume
-    const recoveryFactor = effectiveRecoveryRate / 100;
-    const adjustedMinPlatelets = minPlatelets / recoveryFactor; // Adjust target to account for recovery loss
-    
-    let optimalPrpVolumeML = adjustedMinPlatelets / (effectivePrpConcentration * 1000);
+    // The target platelet count remains the same - recovery rate affects yield, not target
+    let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
     
     // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
     let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield) + iteration);
