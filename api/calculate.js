@@ -291,15 +291,15 @@ function calculatePRPDosage(inputData) {
         effective_recovery_rate: temporalCrownPlan.effectiveRecoveryRate || recoveryRate
     };
     
-    // Set Full Scalp results by doubling volume requirements
-    // For Full Scalp, we need double the volume but can extract more per tube
-    const fullScalpVolumeNeeded = temporalCrownPlan.totalInjectionVolume * 2; // Double the volume needed
-    const fullScalpPrpVolumeNeeded = temporalCrownPlan.totalPrpExtractedML * 2; // Double the PRP needed
-    const fullScalpPppVolumeNeeded = temporalCrownPlan.totalPppNeededML * 2; // Double the PPP needed
+    // For Full Scalp, calculate tubes needed based on actual platelet requirement
+    // We need 2B platelets, so calculate how many tubes of 1ml PRP each we need
+    const fullScalpPlateletsNeeded = ZONES['full_scalp'].minPlatelets; // 2B platelets
+    const fullScalpPrpVolumeNeeded = fullScalpPlateletsNeeded / (finalPrpConcentrationPerUL * 1000); // Volume of PRP needed
+    const fullScalpTubesNeeded = Math.ceil(fullScalpPrpVolumeNeeded / prpYieldPerTube); // Tubes needed for PRP volume
     
-    // For Full Scalp, we need double the volume but can only extract 1ml PRP per tube
-    // So we need double the tubes to get double the PRP volume
-    const fullScalpTubesNeeded = temporalCrownPlan.tubesNeeded * 2; // Double the tubes needed
+    // Calculate total volume needed (at least 3ml minimum)
+    const fullScalpVolumeNeeded = Math.max(3.0, fullScalpPrpVolumeNeeded + 1.0); // At least 3ml, add 1ml PPP for dilution
+    const fullScalpPppVolumeNeeded = fullScalpVolumeNeeded - fullScalpPrpVolumeNeeded; // PPP needed to reach total volume
     
     results['full_scalp'] = {
         zone_name: ZONES['full_scalp'].name,
@@ -312,7 +312,7 @@ function calculatePRPDosage(inputData) {
         target_platelets: ZONES['full_scalp'].targetPlatelets,
         min_platelets: ZONES['full_scalp'].minPlatelets,
         max_platelets: ZONES['full_scalp'].maxPlatelets,
-        total_platelets_extracted: Math.round(temporalCrownPlan.totalPlatelets * 2), // Double platelets
+        total_platelets_extracted: Math.round(fullScalpPrpVolumeNeeded * finalPrpConcentrationPerUL * 1000), // Calculate actual platelets from PRP volume
         platelet_count_range: temporalCrownPlan.plateletCountRange.replace('1.0-3.0B', '2.0-5.0B'), // Update range display
         min_volume_ml: ZONES['full_scalp'].minVolume,
         final_injection_concentration_per_ul: Math.round(temporalCrownPlan.finalMixtureConcentration), // Same concentration
