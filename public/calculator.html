@@ -283,7 +283,7 @@
         <div id="calculator-form" class="space-y-6">
             
             <!-- Section 1: Patient Data -->
-            <div class="section-card">
+            <div class="section-card max-w-md mx-auto">
                 <div class="section-header">
                     <div class="section-icon">
                         👤
@@ -870,6 +870,32 @@
         
         // Initialize floating labels on page load
         document.addEventListener('DOMContentLoaded', initializeFloatingLabels);
+        
+        // Check for URL parameters and auto-run if platelet parameter is present
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUrlParameters();
+        });
+        
+        // Function to check URL parameters and auto-run calculation
+        function checkUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const plateletParam = urlParams.get('platelet');
+            
+            if (plateletParam) {
+                const plateletValue = parseFloat(plateletParam);
+                
+                // Validate the platelet value
+                if (!isNaN(plateletValue) && plateletValue > 0 && plateletValue <= 1000) {
+                    // Pre-fill the thrombocyte field
+                    document.getElementById('thrombocytes').value = plateletValue;
+                    
+                    // Auto-run the calculation
+                    setTimeout(() => {
+                        enhancedCalculateDosage();
+                    }, 100); // Small delay to ensure DOM is ready
+                }
+            }
+        }
 
     </script>
 </body>
