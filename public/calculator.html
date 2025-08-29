@@ -273,14 +273,14 @@
 </head>
 <body class="flex items-center justify-center min-h-screen bg-slate-50 py-12">
 
-    <div class="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-8 lg:p-12 space-y-8">
+    <div class="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl p-6 lg:p-8 space-y-6">
         
-        <div class="text-center mb-8">
-            <h1 class="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Advanced PRP Dosage Calculator</h1>
-            <p class="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">Calculates required volumes based on target platelet count and optimal concentration for hair restoration treatments.</p>
+        <div class="text-center mb-6">
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">PRP Dosage Calculator</h1>
+            <p class="text-sm text-gray-500">Hair restoration treatment planning</p>
         </div>
 
-        <div id="calculator-form" class="space-y-8">
+        <div id="calculator-form" class="space-y-6">
             
             <!-- Section 1: Patient Data -->
             <div class="section-card">
@@ -290,14 +290,14 @@
                     </div>
                     <h3 class="section-title">Patient Data</h3>
                 </div>
-                <div class="grid grid-cols-1 gap-6">
+                <div class="grid grid-cols-1 gap-4">
                     <div class="input-container">
                         <div class="input-with-unit">
                             <input type="number" id="thrombocytes" class="form-input" value="200" placeholder=" ">
                             <label for="thrombocytes" class="form-label">Patient Thrombocytes</label>
                             <span class="input-unit">G/L</span>
                         </div>
-                        <p class="helper-text">Normal range: 150-450 G/L</p>
+                        <p class="helper-text text-xs">Normal range: 150-450 G/L</p>
                     </div>
                 </div>
             </div>
@@ -378,16 +378,16 @@
                     <div id="result-card-temporal_crown" class="section-card">
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Temporal / Crown</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
-                            <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Starting Blood Tubes</p>
+                            <div class="text-center" id="single-spin-column-temporal_crown">
+                                <p class="text-sm text-gray-600 mb-2">Single Spin Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-temporal_crown">0</p>
                             </div>
-                            <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Final Tubes After Processing</p>
+                            <div class="text-center" id="double-spin-column-temporal_crown" style="display: none;">
+                                <p class="text-sm text-gray-600 mb-2">Double Spin Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-temporal_crown">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Extract per Final Tube</p>
+                                <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
                                 <p class="text-2xl font-black gradient-text" id="extract-per-tube-temporal_crown">0 ml</p>
                             </div>
                         </div>
@@ -417,16 +417,16 @@
                     <div id="result-card-full_scalp" class="section-card">
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Full Scalp</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
-                            <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Starting Blood Tubes</p>
+                            <div class="text-center" id="single-spin-column-full_scalp">
+                                <p class="text-sm text-gray-600 mb-2">Single Spin Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-full_scalp">0</p>
                             </div>
-                            <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Final Tubes After Processing</p>
+                            <div class="text-center" id="double-spin-column-full_scalp" style="display: none;">
+                                <p class="text-sm text-gray-600 mb-2">Double Spin Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-full_scalp">0</p>
                             </div>
                             <div class="text-center">
-                                <p class="text-sm text-gray-600 mb-2">Extract per Final Tube</p>
+                                <p class="text-sm text-gray-600 mb-2">Extract per Tube</p>
                                 <p class="text-2xl font-black gradient-text" id="extract-per-tube-full_scalp">0 ml</p>
                             </div>
                         </div>
@@ -573,11 +573,21 @@
                 document.getElementById(`prp-needed-${zoneKey}`).textContent = `${zone.total_prp_volume_ml} ml`;
                 document.getElementById(`ppp-needed-${zoneKey}`).textContent = `${zone.total_ppp_needed_ml} ml`;
                 
-                // Update blood tubes display - show both starting and final tube counts
-                // Starting tubes: always shows the total tubes needed to start with
-                // Final tubes: shows final tubes after processing (1 for double spin, same as starting for single spin)
-                document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed;
-                document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.double_spin_used ? zone.final_tubes_needed : zone.tubes_needed;
+                // Update blood tubes display - show/hide columns based on protocol
+                const singleSpinColumn = document.getElementById(`single-spin-column-${zoneKey}`);
+                const doubleSpinColumn = document.getElementById(`double-spin-column-${zoneKey}`);
+                
+                if (zone.double_spin_used) {
+                    // Double spin: hide single spin column, show double spin column
+                    singleSpinColumn.style.display = 'none';
+                    doubleSpinColumn.style.display = 'block';
+                    document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.final_tubes_needed;
+                } else {
+                    // Single spin: show single spin column, hide double spin column
+                    singleSpinColumn.style.display = 'block';
+                    doubleSpinColumn.style.display = 'none';
+                    document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed;
+                }
                 
                 document.getElementById(`prp-explanation-${zoneKey}`).textContent = explanationText;
                 document.getElementById(`extract-per-tube-${zoneKey}`).textContent = `${zone.extract_volume_per_tube_ml} ml`;
@@ -661,9 +671,14 @@
                 const recoveredLabel = document.getElementById('recovered-label');
                 const inactivatedLabel = document.getElementById('inactivated-label');
                 
-                if (patientDisplay) patientDisplay.textContent = patientPlatelets;
-                if (recoveredDisplay) recoveredDisplay.textContent = recoveredPlatelets;
-                if (inactivatedDisplay) inactivatedDisplay.textContent = inactivatedPlatelets;
+                // Convert to Millions for display
+                const patientPlateletsM = (parseFloat(patientPlatelets) / 1000000).toFixed(2);
+                const recoveredPlateletsM = (parseFloat(recoveredPlatelets) / 1000000).toFixed(2);
+                const inactivatedPlateletsM = (parseFloat(inactivatedPlatelets) / 1000000).toFixed(2);
+                
+                if (patientDisplay) patientDisplay.textContent = `${patientPlateletsM}M`;
+                if (recoveredDisplay) recoveredDisplay.textContent = `${recoveredPlateletsM}M`;
+                if (inactivatedDisplay) inactivatedDisplay.textContent = `${inactivatedPlateletsM}M`;
                 
                 // Update the percentage labels to show actual values
                 const recoveryPercent = firstZone.effective_recovery_rate;
