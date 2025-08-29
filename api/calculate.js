@@ -96,8 +96,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         // Only add PPP if PRP concentration is too high
         if (effectivePrpConcentration > OPTIMAL_MAX_PLATELETS_PER_UL) {
             // Calculate dilution needed to bring concentration down to max optimal
-            // Use 3x PPP concentration for dilution calculations (first 1ml)
-            const pppConcentrationForDilution = baselinePlateletsPerUL * 3.0;
+            // Use 2.5x PPP concentration for dilution calculations (first 1ml)
+            const pppConcentrationForDilution = baselinePlateletsPerUL * 2.5;
             const excessConcentration = effectivePrpConcentration - OPTIMAL_MAX_PLATELETS_PER_UL;
             const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - pppConcentrationForDilution;
             if (dilutionDenominator > 0) {
@@ -123,7 +123,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         const firstPppML = Math.min(1.0, totalPppNeededML);
         const additionalPppML = Math.max(0, totalPppNeededML - 1.0);
         
-        const firstPppConcentration = baselinePlateletsPerUL * 3.0; // 3x for first 1ml
+        const firstPppConcentration = baselinePlateletsPerUL * 2.5; // 2.5x for first 1ml
         const additionalPppConcentration = baselinePlateletsPerUL * 1.0; // 1x for additional
         
         totalPppPlatelets = (firstPppML * firstPppConcentration * 1000) + (additionalPppML * additionalPppConcentration * 1000);
@@ -197,7 +197,7 @@ function calculatePRPDosage(inputData) {
     const patientThrombocytesGL = parseFloat(inputData.thrombocytes || 0);
     const prpYieldPerTube = parseFloat(inputData.prp_yield || 1.0);
     const prpConcentrationX = parseFloat(inputData.prp_concentration || 4.0);
-    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 3.0);
+    const pppConcentrationX = parseFloat(inputData.ppp_concentration || 2.5);
     const recoveryRate = parseFloat(inputData.recovery_rate || 70.0);
     const activationRate = parseFloat(inputData.activation_rate || 20.0);
     
@@ -378,7 +378,7 @@ export default function handler(req, res) {
                     thrombocytes: 200,
                     prp_yield: 1.0,
                     prp_concentration: 4.0,
-                    ppp_concentration: 3.0,
+                    ppp_concentration: 2.5,
                     recovery_rate: 70.0,
                     activation_rate: 20.0
                 },
