@@ -271,8 +271,7 @@ function calculatePRPDosage(inputData) {
     let feedbackType, feedbackMessage;
     if (finalPrpConcentrationPerUL < OPTIMAL_MIN_PLATELETS_PER_UL) {
         feedbackType = "warning";
-        const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL / 1000000).toFixed(2);
-        feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is below the therapeutic window. Double spin protocol will be automatically applied to achieve >${targetConcentration}M/µL concentration.`;
+        feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is below the therapeutic window. Double spin required.`;
     } else if (finalPrpConcentrationPerUL > OPTIMAL_MAX_PLATELETS_PER_UL) {
         feedbackType = "info";
         feedbackMessage = `Your initial PRP has a concentration of ${concentrationMillions.toFixed(2)}M platelets/µL. This is above optimal range, we dilute with PPP to reduce concentration.`;

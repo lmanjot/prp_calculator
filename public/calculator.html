@@ -406,10 +406,7 @@
                             <span class="result-label">PPP to Add:</span>
                             <span class="result-value" id="ppp-needed-temporal_crown">0 ml</span>
                             <span class="result-label">Protocol:</span>
-                            <div class="text-right">
-                                <span class="result-value" id="protocol-temporal_crown">Single Spin</span>
-                                <p class="text-xs text-gray-500 -mt-1" id="protocol-details-temporal_crown"></p>
-                            </div>
+                            <span class="result-value" id="protocol-temporal_crown">Single Spin</span>
                         </div>
                     </div>
 
@@ -445,10 +442,7 @@
                             <span class="result-label">PPP to Add:</span>
                             <span class="result-value" id="ppp-needed-full_scalp">0 ml</span>
                             <span class="result-label">Protocol:</span>
-                            <div class="text-right">
-                                <span class="result-value" id="protocol-full_scalp">Single Spin</span>
-                                <p class="text-xs text-gray-500 -mt-1" id="protocol-details-full_scalp"></p>
-                            </div>
+                            <span class="result-value" id="protocol-full_scalp">Single Spin</span>
                         </div>
                     </div>
                 </div>
@@ -566,7 +560,7 @@
             Object.keys(zones).forEach(zoneKey => {
                 const zone = zones[zoneKey];
                 const explanationText = zone.tubes_needed > 0 ? 
-                    `(${zone.tubes_needed} tube${zone.tubes_needed > 1 ? 's' : ''} × ${zone.extract_volume_per_tube_ml.toFixed(1)} ml)` : '';
+                    `(${zone.double_spin_used ? zone.final_tubes_needed : zone.tubes_needed} tube${(zone.double_spin_used ? zone.final_tubes_needed : zone.tubes_needed) > 1 ? 's' : ''} × ${zone.extract_volume_per_tube_ml.toFixed(1)} ml)` : '';
 
                 // Update the UI for the specific zone card
                 document.getElementById(`total-volume-display-${zoneKey}`).textContent = `${zone.total_injection_volume_ml} ml`;
@@ -622,16 +616,13 @@
                 
                 // Update protocol information
                 const protocolEl = document.getElementById(`protocol-${zoneKey}`);
-                const protocolDetailsEl = document.getElementById(`protocol-details-${zoneKey}`);
                 
                 if (zone.double_spin_used) {
                     protocolEl.textContent = 'Double Spin';
                     protocolEl.className = 'result-value text-purple-600 font-bold';
-                    protocolDetailsEl.textContent = `Double spin`;
                 } else {
                     protocolEl.textContent = 'Single Spin';
                     protocolEl.className = 'result-value text-blue-600';
-                    protocolDetailsEl.textContent = `Single spin`;
                 }
                 
                 // Update tubes explanation
