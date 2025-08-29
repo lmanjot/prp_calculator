@@ -379,11 +379,11 @@
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Temporal / Crown</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
                             <div class="text-center" id="single-spin-column-temporal_crown">
-                                <p class="text-sm text-gray-600 mb-2">Single Spin Tubes</p>
+                                <p class="text-sm text-gray-600 mb-2">Starting Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-temporal_crown">0</p>
                             </div>
                             <div class="text-center" id="double-spin-column-temporal_crown" style="display: none;">
-                                <p class="text-sm text-gray-600 mb-2">Double Spin Tubes</p>
+                                <p class="text-sm text-gray-600 mb-2">Final Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-temporal_crown">0</p>
                             </div>
                             <div class="text-center">
@@ -418,11 +418,11 @@
                         <h2 class="text-xl font-bold text-center text-gray-800 mb-6 pb-4 border-b-2 border-gray-100">Full Scalp</h2>
                         <div class="flex-grow flex items-center justify-around text-center border-b pb-6 mb-6">
                             <div class="text-center" id="single-spin-column-full_scalp">
-                                <p class="text-sm text-gray-600 mb-2">Single Spin Tubes</p>
+                                <p class="text-sm text-gray-600 mb-2">Starting Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-single-spin-full_scalp">0</p>
                             </div>
                             <div class="text-center" id="double-spin-column-full_scalp" style="display: none;">
-                                <p class="text-sm text-gray-600 mb-2">Double Spin Tubes</p>
+                                <p class="text-sm text-gray-600 mb-2">Final Tubes</p>
                                 <p class="text-2xl font-black gradient-text" id="tubes-double-spin-full_scalp">0</p>
                             </div>
                             <div class="text-center">
@@ -578,12 +578,13 @@
                 const doubleSpinColumn = document.getElementById(`double-spin-column-${zoneKey}`);
                 
                 if (zone.double_spin_used) {
-                    // Double spin: hide single spin column, show double spin column
-                    singleSpinColumn.style.display = 'none';
+                    // Double spin: show BOTH columns - single spin (starting) and double spin (final)
+                    singleSpinColumn.style.display = 'block';
                     doubleSpinColumn.style.display = 'block';
-                    document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.final_tubes_needed;
+                    document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed; // Starting tubes
+                    document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.final_tubes_needed; // Final tubes
                 } else {
-                    // Single spin: show single spin column, hide double spin column
+                    // Single spin: show only single spin column, hide double spin column
                     singleSpinColumn.style.display = 'block';
                     doubleSpinColumn.style.display = 'none';
                     document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed;
