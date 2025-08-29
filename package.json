@@ -2,9 +2,11 @@
   "name": "prp-calculator-api",
   "version": "1.0.0",
   "description": "PRP Dosage Calculator API",
+  "type": "module",
   "main": "api/calculate.js",
   "scripts": {
-    "start": "node api/calculate.js"
+    "start": "node api/calculate.js",
+    "dev": "node --watch api/calculate.js"
   },
   "dependencies": {},
   "engines": {

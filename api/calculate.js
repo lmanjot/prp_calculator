@@ -155,6 +155,8 @@ function calculatePRPDosage(inputData) {
     const prpYieldPerTube = parseFloat(inputData.prp_yield || 1.0);
     const prpConcentrationX = parseFloat(inputData.prp_concentration || 7.0);
     const pppConcentrationX = parseFloat(inputData.ppp_concentration || 0.5);
+    const recoveryRate = parseFloat(inputData.recovery_rate || 70.0);
+    const activationRate = parseFloat(inputData.activation_rate || 20.0);
     
     // Validate inputs
     if (patientThrombocytesGL <= 0) {
@@ -166,11 +168,26 @@ function calculatePRPDosage(inputData) {
     if (prpConcentrationX <= 0) {
         throw new Error("PRP concentration must be greater than 0");
     }
+    if (recoveryRate < 0 || recoveryRate > 100) {
+        throw new Error("Recovery rate must be between 0 and 100");
+    }
+    if (activationRate < 0 || activationRate > 100) {
+        throw new Error("Activation rate must be between 0 and 100");
+    }
     
-    // Calculate base concentrations
+    // Calculate base concentrations with recovery and activation factors
     const baselinePlateletsPerUL = patientThrombocytesGL * 1000;
-    const finalPrpConcentrationPerUL = baselinePlateletsPerUL * prpConcentrationX;
-    const finalPppConcentrationPerUL = baselinePlateletsPerUL * pppConcentrationX;
+    
+    // Apply recovery rate: only this percentage of platelets are actually recovered
+    const recoveredPlateletsPerUL = baselinePlateletsPerUL * (recoveryRate / 100);
+    
+    // Apply activation rate: this percentage of recovered platelets get activated
+    const activatedPlateletsPerUL = recoveredPlateletsPerUL * (activationRate / 100);
+    const inactivatedPlateletsPerUL = recoveredPlateletsPerUL * ((100 - activationRate) / 100);
+    
+    // The inactivated platelets are the base for our calculations
+    const finalPrpConcentrationPerUL = inactivatedPlateletsPerUL * prpConcentrationX;
+    const finalPppConcentrationPerUL = inactivatedPlateletsPerUL * pppConcentrationX;
     
     const baseConcentrations = {
         plateletsPerMLofPRP: finalPrpConcentrationPerUL * 1000,
@@ -225,10 +242,15 @@ function calculatePRPDosage(inputData) {
             thrombocytes_gl: patientThrombocytesGL,
             prp_yield_ml: prpYieldPerTube,
             prp_concentration_x: prpConcentrationX,
-            ppp_concentration_x: pppConcentrationX
+            ppp_concentration_x: pppConcentrationX,
+            recovery_rate_percent: recoveryRate,
+            activation_rate_percent: activationRate
         },
         calculated_concentrations: {
             baseline_platelets_per_ul: baselinePlateletsPerUL,
+            recovered_platelets_per_ul: recoveredPlateletsPerUL,
+            activated_platelets_per_ul: activatedPlateletsPerUL,
+            inactivated_platelets_per_ul: inactivatedPlateletsPerUL,
             final_prp_concentration_per_ul: finalPrpConcentrationPerUL,
             final_prp_concentration_millions: Math.round(concentrationMillions * 100) / 100,
             final_ppp_concentration_per_ul: finalPppConcentrationPerUL,
@@ -288,7 +310,9 @@ export default function handler(req, res) {
                     thrombocytes: 200,
                     prp_yield: 1.0,
                     prp_concentration: 7.0,
-                    ppp_concentration: 0.5
+                    ppp_concentration: 0.5,
+                    recovery_rate: 70.0,
+                    activation_rate: 20.0
                 }
             });
             return;
