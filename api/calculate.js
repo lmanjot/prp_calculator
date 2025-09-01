@@ -6,15 +6,15 @@ const ZONES = {
     'temporal_crown': { 
         name: 'Temporal/Crown', 
         minPlatelets: 1.0e9, 
-        maxPlatelets: 3.0e9, 
-        targetPlatelets: 2.0e9, 
+        maxPlatelets: 5.0e9, 
+        targetPlatelets: 3.0e9, 
         minVolume: 2.0 
     },
     'full_scalp': { 
         name: 'Full Scalp', 
         minPlatelets: 2.0e9, 
-        maxPlatelets: 5.0e9, 
-        targetPlatelets: 3.5e9, 
+        maxPlatelets: 10.0e9, 
+        targetPlatelets: 6.0e9, 
         minVolume: 3.0 
     }
 };
