@@ -12,7 +12,7 @@ const ZONES = {
     },
     'full_scalp': { 
         name: 'Full Scalp', 
-        minPlatelets: 3e9, 
+        minPlatelets: 2e9, 
         maxPlatelets: 10.0e9, 
         targetPlatelets: 6.0e9, 
         minVolume: 4.0 
