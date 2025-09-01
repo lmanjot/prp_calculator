@@ -370,7 +370,7 @@
         <div id="results" class="hidden pt-8">
             <div class="border-t-2 border-gray-200 pt-8">
                 <div id="concentration-feedback" class="mb-8 p-6 rounded-2xl text-center shadow-lg">
-                    <p class="font-bold text-lg mb-2">PRP Concentration Analysis</p>
+                    <p class="font-bold text-lg mb-2" id="protocol-title">PRP Concentration Analysis</p>
                     <p id="feedback-text" class="text-sm leading-relaxed"></p>
                 </div>
                 
@@ -400,7 +400,7 @@
                             <span class="result-label">Total Platelets Extracted:</span>
                             <div class="text-right">
                                 <span class="result-value" id="total-platelets-temporal_crown">0 B</span>
-                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-temporal_crown">Target: 1.5-2.0B</p>
+                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-temporal_crown">Target: 1.0-5.0B</p>
                             </div>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
@@ -439,7 +439,7 @@
                             <span class="result-label">Total Platelets Extracted:</span>
                             <div class="text-right">
                                 <span class="result-value" id="total-platelets-full_scalp">0 B</span>
-                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-full_scalp">Target: 3.0-4.0B</p>
+                                <p class="text-xs text-gray-500 -mt-1" id="platelet-range-full_scalp">Target: 2.0-10.0B</p>
                             </div>
                             <span class="result-label">Total PRP Volume:</span>
                             <div class="text-right">
@@ -504,6 +504,7 @@
         
         const feedbackDiv = document.getElementById('concentration-feedback');
         const feedbackTextEl = document.getElementById('feedback-text');
+        const protocolTitleEl = document.getElementById('protocol-title');
 
         // --- API CALCULATION LOGIC ---
         async function calculateDosage() {
@@ -626,10 +627,10 @@
                 let minTarget, maxTarget;
                 if (zoneKey === 'temporal_crown') {
                     minTarget = 1.0e9; // 1.0B
-                    maxTarget = 3.0e9; // 3.0B
+                    maxTarget = 5.0e9; // 5.0B
                 } else if (zoneKey === 'full_scalp') {
                     minTarget = 2.0e9; // 2.0B
-                    maxTarget = 5.0e9; // 5.0B
+                    maxTarget = 10.0e9; // 10.0B
                 }
                 
                 // Check if extracted platelets are within target range
@@ -644,9 +645,9 @@
                 // Update platelet range display with new target ranges
                 let targetRangeText;
                 if (zoneKey === 'temporal_crown') {
-                    targetRangeText = 'Target: 1.0-3.0B';
+                    targetRangeText = 'Target: 1.0-5.0B';
                 } else if (zoneKey === 'full_scalp') {
-                    targetRangeText = 'Target: 2.0-5.0B';
+                    targetRangeText = 'Target: 2.0-10.0B';
                 }
                 document.getElementById(`platelet-range-${zoneKey}`).textContent = targetRangeText;
                 
@@ -749,6 +750,18 @@
             
             feedbackDiv.className = feedbackClass;
             feedbackTextEl.innerHTML = feedback.message.replace(/(\d+\.\d+M platelets\/µL)/, '<strong>$1</strong>');
+
+            // Update protocol title based on concentration
+            const finalPrpConcentration = calculated_concentrations.final_prp_concentration_per_ul;
+            const minThreshold = 1000000; // 1.0M platelets/µL threshold for double spin
+            
+            if (finalPrpConcentration < minThreshold) {
+                protocolTitleEl.textContent = 'Double Spin Protocol Needed';
+                protocolTitleEl.className = 'font-bold text-lg mb-2 text-orange-600';
+            } else {
+                protocolTitleEl.textContent = 'Single Spin Protocol';
+                protocolTitleEl.className = 'font-bold text-lg mb-2 text-green-600';
+            }
 
             // Show the results section
             resultsDiv.classList.remove('hidden');
