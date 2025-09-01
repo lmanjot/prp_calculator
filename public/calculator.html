@@ -756,10 +756,10 @@
             const minThreshold = 1000000; // 1.0M platelets/µL threshold for double spin
             
             if (finalPrpConcentration < minThreshold) {
-                protocolTitleEl.textContent = 'Double Spin Protocol Needed';
+                protocolTitleEl.innerHTML = '⚠️ Double Spin Protocol Needed';
                 protocolTitleEl.className = 'font-bold text-lg mb-2 text-orange-600';
             } else {
-                protocolTitleEl.textContent = 'Single Spin Protocol';
+                protocolTitleEl.innerHTML = '✅ Single Spin Protocol';
                 protocolTitleEl.className = 'font-bold text-lg mb-2 text-green-600';
             }
 
