@@ -127,12 +127,23 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
             }
         }
     } else {
-        // We need to add PPP to reach minimum volume
+        // We need to add PPP to reach minimum volume, BUT check if it would dilute below therapeutic threshold
         const baseVolumeTopUp = minVolume - totalPrpExtractedML;
         
-        // Always add PPP to reach minimum volume
-        // The concentration check is handled in the iteration logic
-        volumeTopUpPppML = baseVolumeTopUp;
+        // Calculate what the final concentration would be if we add PPP
+        const pppConcentrationForVolume = baselinePlateletsPerUL * 2.5; // 2.5x for first 1ml
+        const totalPlateletsWithPPP = (totalPrpExtractedML * effectivePrpConcentration * 1000) + 
+                                     (baseVolumeTopUp * pppConcentrationForVolume * 1000);
+        const finalVolumeWithPPP = totalPrpExtractedML + baseVolumeTopUp;
+        const finalConcentrationWithPPP = totalPlateletsWithPPP / (finalVolumeWithPPP * 1000);
+        
+        // Only add PPP if it doesn't bring concentration below therapeutic threshold
+        if (finalConcentrationWithPPP >= OPTIMAL_MIN_PLATELETS_PER_UL) {
+            volumeTopUpPppML = baseVolumeTopUp;
+        } else {
+            // Don't add PPP - keep pure PRP to maintain therapeutic concentration
+            volumeTopUpPppML = 0;
+        }
     }
     
     const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
