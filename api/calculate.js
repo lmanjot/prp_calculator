@@ -168,7 +168,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         }
         
         // Priority 2: If concentration is too low, we need more tubes (more platelets)
-        if (concentrationTooLow) {
+        // BUT: For double spin with PPP dilution, accept lower concentration if platelets are sufficient
+        if (concentrationTooLow && !(useDoubleSpin && totalPppNeededML > 0)) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
@@ -282,8 +283,8 @@ function calculatePRPDosage(inputData) {
         // Set results for this zone
         results[zoneKey] = {
             zone_name: zone.name,
-            tubes_needed: plan.tubesNeeded, // Actual tubes needed for the calculation
-            final_tubes_needed: plan.tubesNeeded, // Same as tubes_needed (no longer different for double spin)
+            tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Starting blood tubes needed
+            final_tubes_needed: plan.tubesNeeded, // Final PRP tubes after double spin
             total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
             total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,
