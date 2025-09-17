@@ -80,8 +80,8 @@ Calculates PRP dosage based on patient data and protocol parameters.
                 "total_prp_volume_ml": 3.0,
                 "total_ppp_needed_ml": 0,
                 "extract_volume_per_tube_ml": 1.0,
-                "target_platelets": 3500000000.0,
-                "min_volume_ml": 2.0
+                "target_platelets": 3000000000.0,
+                "min_volume_ml": 3.0
             }
         }
     }
