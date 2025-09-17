@@ -27,7 +27,7 @@ const DOUBLE_SPIN_CONFIG = {
     enabled: true,
     minConcentrationThreshold: 1000000, // 1.0M/µL - threshold to trigger double spin
     concentrationMultiplier: 7.0, // 7x concentration after double spin
-    prpYieldPerTube: 2.0, // 2ml PRP per tube after double spin (when using 2 single spin tubes)
+    prpYieldPerTube: 1.0, // 1ml PRP per starting tube (1 starting tube = 1ml PRP, 2 starting tubes = 2ml PRP)
     requiresEvenTubes: false // Can use any number of tubes (3 single spin → 1 double spin)
 };
 
