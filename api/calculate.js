@@ -94,6 +94,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
                 tubesNeeded = reducedTubes;
             }
         }
+        
+        // For double spin, we need at least 1 tube (the even number requirement applies to starting blood tubes, not final PRP tubes)
+        tubesNeeded = Math.max(1, tubesNeeded);
     }
     
     // C. Calculate actual PRP volume we'll extract
@@ -272,13 +275,6 @@ function calculatePRPDosage(inputData) {
         if (useDoubleSpin) {
             // First try with double spin
             plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
-            
-            // Ensure even number of tubes for double spin
-            if (plan.tubesNeeded % 2 !== 0) {
-                plan.tubesNeeded = Math.ceil(plan.tubesNeeded / 2) * 2;
-                // Recalculate with adjusted tube count
-                plan = getTreatmentPlan(zone, baseConcentrations, 0, true);
-            }
         } else {
             plan = getTreatmentPlan(zone, baseConcentrations, 0, false);
         }
