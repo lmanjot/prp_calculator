@@ -27,8 +27,8 @@ const DOUBLE_SPIN_CONFIG = {
     enabled: true,
     minConcentrationThreshold: 1000000, // 1.0M/µL - threshold to trigger double spin
     concentrationMultiplier: 7.0, // 7x concentration after double spin
-    prpYieldPerTube: 2.0, // 2ml PRP per tube after double spin
-    requiresEvenTubes: true // Must use 2, 4, 6, etc. tubes
+    prpYieldPerTube: 1.0, // 1ml PRP per starting tube (1 starting tube = 1ml PRP, 2 starting tubes = 2ml PRP)
+    requiresEvenTubes: false // Can use any number of tubes (3 single spin → 1 double spin)
 };
 
 // Optimized calculation function to achieve both concentration and platelet count targets
@@ -42,7 +42,11 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     
     if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
         effectivePrpConcentration = finalPrpConcentrationPerUL * (DOUBLE_SPIN_CONFIG.concentrationMultiplier / 4.0); // Adjust from 4x to 7x
-        effectivePrpYield = DOUBLE_SPIN_CONFIG.prpYieldPerTube; // 2ml instead of 1ml
+        // For double spin, PRP yield is proportional to the number of starting tubes
+        // 2 single spin tubes → 1 double spin tube with 2ml PRP
+        // 3 single spin tubes → 1 double spin tube with 3ml PRP
+        // etc.
+        effectivePrpYield = DOUBLE_SPIN_CONFIG.prpYieldPerTube; // Base yield per starting tube
     }
     
     // For single spin, ensure we use the correct concentration
@@ -67,40 +71,59 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // The target platelet count remains the same - recovery rate affects yield, not target
     let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
     
-    // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
-    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield));
+    // B. Calculate starting tubes needed for this PRP volume
+    let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
+    
+    // For double spin, we always end up with 1 final tube, but the PRP yield is proportional to starting tubes
+    let tubesNeeded = startingTubesNeeded;
+    if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+        // Final tubes after double spin is always 1, but yield is proportional to starting tubes
+        effectivePrpYield = startingTubesNeeded * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
+    }
     
     // Handle iteration adjustments: positive for increasing, negative for decreasing
     if (iteration > 0) {
-        tubesNeeded += iteration; // Add tubes for platelet count or concentration issues
+        startingTubesNeeded += iteration; // Add tubes for platelet count or concentration issues
+        tubesNeeded = startingTubesNeeded;
+        if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+            effectivePrpYield = startingTubesNeeded * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
+        }
     } else if (iteration < 0) {
-        tubesNeeded = Math.max(1, tubesNeeded + iteration); // Reduce tubes (but not below 1)
+        startingTubesNeeded = Math.max(1, startingTubesNeeded + iteration); // Reduce tubes (but not below 1)
+        tubesNeeded = startingTubesNeeded;
+        if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+            effectivePrpYield = startingTubesNeeded * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
+        }
     }
     
     // For double spin, optimize tube count to minimize excess platelets
     if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
         // Calculate what we'd get with current tube count
-        const currentVolume = tubesNeeded * effectivePrpYield;
+        const currentVolume = effectivePrpYield;
         const currentPlatelets = currentVolume * effectivePrpConcentration * 1000;
         
         // Check if we can reduce tubes while still meeting minimum requirements
-        if (tubesNeeded > 1) {
-            const reducedTubes = tubesNeeded - 1;
-            const reducedVolume = reducedTubes * effectivePrpYield;
-            const reducedPlatelets = reducedVolume * effectivePrpConcentration * 1000;
+        if (startingTubesNeeded > 1) {
+            const reducedTubes = startingTubesNeeded - 1;
+            const reducedYield = reducedTubes * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
+            const reducedPlatelets = reducedYield * effectivePrpConcentration * 1000;
             
             // If reduced tubes still meet minimum platelets and volume, use fewer tubes
-            if (reducedPlatelets >= minPlatelets && reducedVolume >= minVolume) {
-                tubesNeeded = reducedTubes;
+            if (reducedPlatelets >= minPlatelets && reducedYield >= minVolume) {
+                startingTubesNeeded = reducedTubes;
+                tubesNeeded = startingTubesNeeded;
+                effectivePrpYield = startingTubesNeeded * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
             }
         }
         
-        // For double spin, we need at least 1 tube (the even number requirement applies to starting blood tubes, not final PRP tubes)
-        tubesNeeded = Math.max(1, tubesNeeded);
+        // For double spin, we need at least 1 starting tube
+        startingTubesNeeded = Math.max(1, startingTubesNeeded);
+        tubesNeeded = startingTubesNeeded;
+        effectivePrpYield = startingTubesNeeded * DOUBLE_SPIN_CONFIG.prpYieldPerTube;
     }
     
     // C. Calculate actual PRP volume we'll extract
-    let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
+    let totalPrpExtractedML = useDoubleSpin ? effectivePrpYield : tubesNeeded * effectivePrpYield;
     
     // D. Calculate total platelets from actual PRP volume
     // This should be based on the effective PRP concentration (what we actually extract)
@@ -294,8 +317,8 @@ function calculatePRPDosage(inputData) {
         // Set results for this zone
         results[zoneKey] = {
             zone_name: zone.name,
-            tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Starting blood tubes needed
-            final_tubes_needed: plan.tubesNeeded, // Final PRP tubes after double spin
+            tubes_needed: plan.tubesNeeded, // Starting blood tubes needed
+            final_tubes_needed: useDoubleSpin ? 1 : plan.tubesNeeded, // Final PRP tubes after double spin (always 1 for double spin)
             total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
             total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,
