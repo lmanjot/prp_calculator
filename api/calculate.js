@@ -35,7 +35,7 @@ const DOUBLE_SPIN_CONFIG = {
 // Optimized calculation function to achieve both concentration and platelet count targets
 function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin = false) {
     const { minPlatelets, maxPlatelets, targetPlatelets, minVolume } = zone;
-    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, prpYieldPerTube, baselinePlateletsPerUL, recoveryRate, activationRate, prpConcentrationX } = baseConcentrations;
+    const { plateletsPerMLofPRP, finalPrpConcentrationPerUL, prpYieldPerTube, baselinePlateletsPerUL, recoveryRate, activationRate, prpConcentrationX, patientThrombocytesGL } = baseConcentrations;
     
     // Apply double spin configuration if needed
     let effectivePrpConcentration = finalPrpConcentrationPerUL;
@@ -221,8 +221,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         }
         
         // Priority 2: If concentration is too low, we need more tubes (more platelets)
-        // BUT: For double spin with PPP dilution, accept lower concentration if platelets are sufficient
-        if (concentrationTooLow && !(useDoubleSpin && totalPppNeededML > 0)) {
+        // BUT: For double spin cases where concentration cannot be reached (<150 thrombocytes), 
+        // accept lower concentration and optimize for platelet count only
+        if (concentrationTooLow && !(useDoubleSpin && (totalPppNeededML > 0 || patientThrombocytesGL < 150))) {
             return getTreatmentPlan(zone, baseConcentrations, iteration + 1);
         }
         
@@ -311,7 +312,8 @@ function calculatePRPDosage(inputData) {
         baselinePlateletsPerUL,
         recoveryRate,
         activationRate,
-        prpConcentrationX
+        prpConcentrationX,
+        patientThrombocytesGL
     };
     
     const results = {};
