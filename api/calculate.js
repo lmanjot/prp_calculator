@@ -80,9 +80,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // For double spin, calculate final tubes and adjust yield
     let tubesNeeded = startingTubesNeeded;
     if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
-        // Final tubes must be even, but yield is proportional to starting tubes
-        let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2); // Round up to get final tubes
-        let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded; // Proportional yield per final tube
+        // All starting tubes consolidate into 1 final tube with total volume
+        let finalTubesNeeded = 1; // Always 1 final tube
+        let prpYieldPerFinalTube = startingTubesNeeded; // Total volume in single final tube
         
         tubesNeeded = finalTubesNeeded;
         effectivePrpYield = prpYieldPerFinalTube;
@@ -92,8 +92,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     if (iteration > 0) {
         startingTubesNeeded += iteration; // Add tubes for platelet count or concentration issues
         if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
-            let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
-            let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+            let finalTubesNeeded = 1; // Always 1 final tube
+            let prpYieldPerFinalTube = startingTubesNeeded; // Total volume in single final tube
             tubesNeeded = finalTubesNeeded;
             effectivePrpYield = prpYieldPerFinalTube;
         } else {
@@ -102,8 +102,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     } else if (iteration < 0) {
         startingTubesNeeded = Math.max(1, startingTubesNeeded + iteration); // Reduce tubes (but not below 1)
         if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
-            let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
-            let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+            let finalTubesNeeded = 1; // Always 1 final tube
+            let prpYieldPerFinalTube = startingTubesNeeded; // Total volume in single final tube
             tubesNeeded = finalTubesNeeded;
             effectivePrpYield = prpYieldPerFinalTube;
         } else {
@@ -120,8 +120,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         // Check if we can reduce starting tubes while still meeting minimum requirements
         if (startingTubesNeeded > 1) {
             const reducedStartingTubes = startingTubesNeeded - 1;
-            const reducedFinalTubes = Math.ceil(reducedStartingTubes / 2);
-            const reducedYieldPerTube = reducedStartingTubes / reducedFinalTubes;
+            const reducedFinalTubes = 1; // Always 1 final tube
+            const reducedYieldPerTube = reducedStartingTubes; // Total volume in single final tube
             const reducedVolume = reducedFinalTubes * reducedYieldPerTube;
             const reducedPlatelets = reducedVolume * effectivePrpConcentration * 1000;
             
@@ -135,8 +135,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         
         // For double spin, we need at least 1 starting tube
         startingTubesNeeded = Math.max(1, startingTubesNeeded);
-        let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
-        let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+        let finalTubesNeeded = 1; // Always 1 final tube
+        let prpYieldPerFinalTube = startingTubesNeeded; // Total volume in single final tube
         tubesNeeded = finalTubesNeeded;
         effectivePrpYield = prpYieldPerFinalTube;
     }
