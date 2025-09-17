@@ -27,8 +27,9 @@ const DOUBLE_SPIN_CONFIG = {
     enabled: true,
     minConcentrationThreshold: 1000000, // 1.0M/µL - threshold to trigger double spin
     concentrationMultiplier: 7.0, // 7x concentration after double spin
-    prpYieldPerTube: 2.0, // 2ml PRP per tube after double spin
-    requiresEvenTubes: true // Must use 2, 4, 6, etc. tubes
+    prpYieldPerTube: 1.0, // 1ml PRP per starting tube (1 starting tube = 1ml PRP, 2 starting tubes = 2ml PRP)
+    requiresEvenTubes: false, // Can use any number of starting tubes
+    finalTubesEven: true // Final tubes must be even (3 starting → 2 final tubes)
 };
 
 // Optimized calculation function to achieve both concentration and platelet count targets
@@ -67,14 +68,41 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // The target platelet count remains the same - recovery rate affects yield, not target
     let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
     
-    // B. Calculate tubes needed for this PRP volume, adding iterations for adjustments
-    let tubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / effectivePrpYield));
+    // B. Calculate starting tubes needed for this PRP volume
+    let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
+    
+    // For double spin, calculate final tubes and adjust yield
+    let tubesNeeded = startingTubesNeeded;
+    if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+        // Final tubes must be even, but yield is proportional to starting tubes
+        let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2); // Round up to get final tubes
+        let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded; // Proportional yield per final tube
+        
+        tubesNeeded = finalTubesNeeded;
+        effectivePrpYield = prpYieldPerFinalTube;
+    }
     
     // Handle iteration adjustments: positive for increasing, negative for decreasing
     if (iteration > 0) {
-        tubesNeeded += iteration; // Add tubes for platelet count or concentration issues
+        startingTubesNeeded += iteration; // Add tubes for platelet count or concentration issues
+        if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+            let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
+            let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+            tubesNeeded = finalTubesNeeded;
+            effectivePrpYield = prpYieldPerFinalTube;
+        } else {
+            tubesNeeded = startingTubesNeeded;
+        }
     } else if (iteration < 0) {
-        tubesNeeded = Math.max(1, tubesNeeded + iteration); // Reduce tubes (but not below 1)
+        startingTubesNeeded = Math.max(1, startingTubesNeeded + iteration); // Reduce tubes (but not below 1)
+        if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+            let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
+            let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+            tubesNeeded = finalTubesNeeded;
+            effectivePrpYield = prpYieldPerFinalTube;
+        } else {
+            tubesNeeded = startingTubesNeeded;
+        }
     }
     
     // For double spin, optimize tube count to minimize excess platelets
@@ -83,20 +111,28 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         const currentVolume = tubesNeeded * effectivePrpYield;
         const currentPlatelets = currentVolume * effectivePrpConcentration * 1000;
         
-        // Check if we can reduce tubes while still meeting minimum requirements
-        if (tubesNeeded > 1) {
-            const reducedTubes = tubesNeeded - 1;
-            const reducedVolume = reducedTubes * effectivePrpYield;
+        // Check if we can reduce starting tubes while still meeting minimum requirements
+        if (startingTubesNeeded > 1) {
+            const reducedStartingTubes = startingTubesNeeded - 1;
+            const reducedFinalTubes = Math.ceil(reducedStartingTubes / 2);
+            const reducedYieldPerTube = reducedStartingTubes / reducedFinalTubes;
+            const reducedVolume = reducedFinalTubes * reducedYieldPerTube;
             const reducedPlatelets = reducedVolume * effectivePrpConcentration * 1000;
             
             // If reduced tubes still meet minimum platelets and volume, use fewer tubes
             if (reducedPlatelets >= minPlatelets && reducedVolume >= minVolume) {
-                tubesNeeded = reducedTubes;
+                startingTubesNeeded = reducedStartingTubes;
+                tubesNeeded = reducedFinalTubes;
+                effectivePrpYield = reducedYieldPerTube;
             }
         }
         
-        // For double spin, we need at least 1 tube (the even number requirement applies to starting blood tubes, not final PRP tubes)
-        tubesNeeded = Math.max(1, tubesNeeded);
+        // For double spin, we need at least 1 starting tube
+        startingTubesNeeded = Math.max(1, startingTubesNeeded);
+        let finalTubesNeeded = Math.ceil(startingTubesNeeded / 2);
+        let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+        tubesNeeded = finalTubesNeeded;
+        effectivePrpYield = prpYieldPerFinalTube;
     }
     
     // C. Calculate actual PRP volume we'll extract
