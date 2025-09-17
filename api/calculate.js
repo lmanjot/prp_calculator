@@ -77,6 +77,25 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         tubesNeeded = Math.max(1, tubesNeeded + iteration); // Reduce tubes (but not below 1)
     }
     
+    // For double spin, optimize tube count to minimize excess platelets
+    if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+        // Calculate what we'd get with current tube count
+        const currentVolume = tubesNeeded * effectivePrpYield;
+        const currentPlatelets = currentVolume * effectivePrpConcentration * 1000;
+        
+        // Check if we can reduce tubes while still meeting minimum requirements
+        if (tubesNeeded > 1) {
+            const reducedTubes = tubesNeeded - 1;
+            const reducedVolume = reducedTubes * effectivePrpYield;
+            const reducedPlatelets = reducedVolume * effectivePrpConcentration * 1000;
+            
+            // If reduced tubes still meet minimum platelets and volume, use fewer tubes
+            if (reducedPlatelets >= minPlatelets && reducedVolume >= minVolume) {
+                tubesNeeded = reducedTubes;
+            }
+        }
+    }
+    
     // C. Calculate actual PRP volume we'll extract
     let totalPrpExtractedML = tubesNeeded * effectivePrpYield;
     
@@ -267,8 +286,8 @@ function calculatePRPDosage(inputData) {
         // Set results for this zone
         results[zoneKey] = {
             zone_name: zone.name,
-            tubes_needed: useDoubleSpin ? plan.tubesNeeded * 2 : plan.tubesNeeded, // Show starting tubes needed
-            final_tubes_needed: plan.tubesNeeded, // Final tubes after double spin
+            tubes_needed: plan.tubesNeeded, // Actual tubes needed for the calculation
+            final_tubes_needed: plan.tubesNeeded, // Same as tubes_needed (no longer different for double spin)
             total_injection_volume_ml: Math.round(plan.totalInjectionVolume * 10) / 10,
             total_prp_volume_ml: Math.round(plan.totalPrpExtractedML * 10) / 10,
             total_ppp_needed_ml: Math.round(plan.totalPppNeededML * 10) / 10,

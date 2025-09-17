@@ -580,11 +580,10 @@
                 const doubleSpinColumn = document.getElementById(`double-spin-column-${zoneKey}`);
                 
                 if (zone.double_spin_used) {
-                    // Double spin: show BOTH columns - single spin (starting) and double spin (final)
-                    singleSpinColumn.style.display = 'block';
+                    // Double spin: show only double spin column (since tubes_needed now shows actual tubes needed)
+                    singleSpinColumn.style.display = 'none';
                     doubleSpinColumn.style.display = 'block';
-                    document.getElementById(`tubes-single-spin-${zoneKey}`).textContent = zone.tubes_needed; // Starting tubes
-                    document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.final_tubes_needed; // Final tubes
+                    document.getElementById(`tubes-double-spin-${zoneKey}`).textContent = zone.tubes_needed; // Actual tubes needed
                 } else {
                     // Single spin: show only single spin column, hide double spin column
                     singleSpinColumn.style.display = 'block';
