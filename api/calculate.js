@@ -71,11 +71,9 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // B. Calculate starting tubes needed for this PRP volume
     let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
     
-    // For double spin, ensure we meet minimum volume requirement
-    if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
-        const minStartingTubesForVolume = Math.ceil(minVolume / DOUBLE_SPIN_CONFIG.prpYieldPerTube);
-        startingTubesNeeded = Math.max(startingTubesNeeded, minStartingTubesForVolume);
-    }
+    // Ensure we meet minimum volume requirement (applies to both single and double spin)
+    const minStartingTubesForVolume = Math.ceil(minVolume / DOUBLE_SPIN_CONFIG.prpYieldPerTube);
+    startingTubesNeeded = Math.max(startingTubesNeeded, minStartingTubesForVolume);
     
     // For double spin, calculate final tubes and adjust yield
     let tubesNeeded = startingTubesNeeded;
