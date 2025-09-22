@@ -71,9 +71,16 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // B. Calculate starting tubes needed for this PRP volume
     let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
     
-    // Ensure we meet minimum volume requirement (applies to both single and double spin)
+    // Ensure we meet minimum volume requirement, but relax it for high-concentration PRP
+    // For high-concentration PRP (>1.5M/µL), we can achieve therapeutic platelet counts with less volume
     const minStartingTubesForVolume = Math.ceil(minVolume / DOUBLE_SPIN_CONFIG.prpYieldPerTube);
-    startingTubesNeeded = Math.max(startingTubesNeeded, minStartingTubesForVolume);
+    
+    // Only enforce minimum volume if:
+    // 1. We're using double spin (low concentration), OR
+    // 2. The PRP concentration is below optimal range (<1.5M/µL)
+    if (useDoubleSpin || effectivePrpConcentration < OPTIMAL_MAX_PLATELETS_PER_UL) {
+        startingTubesNeeded = Math.max(startingTubesNeeded, minStartingTubesForVolume);
+    }
     
     // For double spin, calculate final tubes and adjust yield
     let tubesNeeded = startingTubesNeeded;
