@@ -71,17 +71,6 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // B. Calculate starting tubes needed for this PRP volume
     let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
     
-    // Ensure we meet minimum volume requirement, but relax it for high-concentration PRP
-    // For high-concentration PRP (>1.5M/µL), we can achieve therapeutic platelet counts with less volume
-    const minStartingTubesForVolume = Math.ceil(minVolume / DOUBLE_SPIN_CONFIG.prpYieldPerTube);
-    
-    // Only enforce minimum volume if:
-    // 1. We're using double spin (low concentration), OR
-    // 2. The PRP concentration is below optimal range (<1.5M/µL)
-    if (useDoubleSpin || effectivePrpConcentration < OPTIMAL_MAX_PLATELETS_PER_UL) {
-        startingTubesNeeded = Math.max(startingTubesNeeded, minStartingTubesForVolume);
-    }
-    
     // For double spin, calculate final tubes and adjust yield
     let tubesNeeded = startingTubesNeeded;
     if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
@@ -193,8 +182,69 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
         }
     }
     
-    const totalPppNeededML = concentrationPppML + volumeTopUpPppML;
-    const totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
+    let totalPppNeededML = concentrationPppML + volumeTopUpPppML;
+    let totalInjectionVolume = totalPrpExtractedML + totalPppNeededML;
+    
+    // Check if final injection volume meets minimum requirement
+    // If not, we need to increase tube count and recalculate
+    if (totalInjectionVolume < minVolume) {
+        // Calculate how many additional tubes we need to meet minimum volume
+        const additionalVolumeNeeded = minVolume - totalInjectionVolume;
+        const additionalTubesNeeded = Math.ceil(additionalVolumeNeeded / effectivePrpYield);
+        
+        // Update tube count
+        startingTubesNeeded += additionalTubesNeeded;
+        
+        // Recalculate for double spin if needed
+        if (useDoubleSpin && DOUBLE_SPIN_CONFIG.enabled) {
+            let finalTubesNeeded = Math.floor(startingTubesNeeded / 2) || 1;
+            let prpYieldPerFinalTube = startingTubesNeeded / finalTubesNeeded;
+            tubesNeeded = finalTubesNeeded;
+            effectivePrpYield = prpYieldPerFinalTube;
+        } else {
+            tubesNeeded = startingTubesNeeded;
+        }
+        
+        // Recalculate PRP volume and PPP needs with new tube count
+        totalPrpExtractedML = tubesNeeded * effectivePrpYield;
+        
+        // Recalculate PPP needed
+        concentrationPppML = 0;
+        volumeTopUpPppML = 0;
+        
+        if (totalPrpExtractedML >= minVolume) {
+            volumeTopUpPppML = 0;
+            if (effectivePrpConcentration > OPTIMAL_MAX_PLATELETS_PER_UL) {
+                const pppConcentrationForDilution = baselinePlateletsPerUL * 2.5;
+                const excessConcentration = effectivePrpConcentration - OPTIMAL_MAX_PLATELETS_PER_UL;
+                const dilutionDenominator = OPTIMAL_MAX_PLATELETS_PER_UL - pppConcentrationForDilution;
+                if (dilutionDenominator > 0) {
+                    concentrationPppML = (totalPrpExtractedML * excessConcentration) / dilutionDenominator;
+                }
+            }
+        } else {
+            const baseVolumeTopUp = minVolume - totalPrpExtractedML;
+            const pppConcentrationForVolume = baselinePlateletsPerUL * 2.5;
+            const totalPlateletsWithPPP = (totalPrpExtractedML * effectivePrpConcentration * 1000) + 
+                                         (baseVolumeTopUp * pppConcentrationForVolume * 1000);
+            const finalVolumeWithPPP = totalPrpExtractedML + baseVolumeTopUp;
+            const finalConcentrationWithPPP = totalPlateletsWithPPP / (finalVolumeWithPPP * 1000);
+            
+            if (finalConcentrationWithPPP >= OPTIMAL_MIN_PLATELETS_PER_UL) {
+                volumeTopUpPppML = baseVolumeTopUp;
+            } else {
+                volumeTopUpPppML = 0;
+            }
+        }
+        
+        // Recalculate final totals
+        const newTotalPppNeededML = concentrationPppML + volumeTopUpPppML;
+        const newTotalInjectionVolume = totalPrpExtractedML + newTotalPppNeededML;
+        
+        // Update the variables
+        totalPppNeededML = newTotalPppNeededML;
+        totalInjectionVolume = newTotalInjectionVolume;
+    }
 
     // H. Calculate final totals with two-tier PPP concentration
     // First 1ml of PPP has 3x concentration, additional PPP has 1x concentration
