@@ -265,7 +265,8 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // I. Check if we're within acceptable ranges
     const concentrationTooLow = finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL;
     const concentrationTooHigh = finalMixtureConcentration > OPTIMAL_MAX_PLATELETS_PER_UL;
-    const plateletCountTooLow = totalPlatelets < minPlatelets;
+    // Add 5% tolerance to minimum platelet requirement to avoid unnecessary tube increases
+    const plateletCountTooLow = totalPlatelets < (minPlatelets * 0.95);
     const plateletCountTooHigh = totalPlatelets > maxPlatelets;
     
     // J. Adjust tube count if needed - PRIORITIZE PLATELET COUNT OVER CONCENTRATION
