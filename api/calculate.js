@@ -65,8 +65,13 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     const targetConcentration = (OPTIMAL_MIN_PLATELETS_PER_UL + OPTIMAL_MAX_PLATELETS_PER_UL) / 2;
     
     // A. Start with minimum PRP needed to hit minimum platelet count
-    // The target platelet count remains the same - recovery rate affects yield, not target
-    let optimalPrpVolumeML = minPlatelets / (effectivePrpConcentration * 1000);
+    // Account for the fact that PPP will also contribute platelets to the final mixture
+    // PPP contributes platelets at 2.5x concentration for first 1ml, then 1x for additional
+    // For initial calculation, assume we'll need some PPP for volume/concentration, so we can use fewer PRP tubes
+    const pppConcentrationForEstimation = baselinePlateletsPerUL * 2.5; // 2.5x for estimation
+    const estimatedPppContribution = Math.min(1.0, minVolume * 0.3) * pppConcentrationForEstimation * 1000; // Assume ~30% of volume is PPP
+    const requiredPrpPlatelets = Math.max(0, minPlatelets - estimatedPppContribution);
+    let optimalPrpVolumeML = requiredPrpPlatelets / (effectivePrpConcentration * 1000);
     
     // B. Calculate starting tubes needed for this PRP volume
     let startingTubesNeeded = Math.max(1, Math.ceil(optimalPrpVolumeML / DOUBLE_SPIN_CONFIG.prpYieldPerTube));
@@ -265,8 +270,7 @@ function getTreatmentPlan(zone, baseConcentrations, iteration = 0, useDoubleSpin
     // I. Check if we're within acceptable ranges
     const concentrationTooLow = finalMixtureConcentration < OPTIMAL_MIN_PLATELETS_PER_UL;
     const concentrationTooHigh = finalMixtureConcentration > OPTIMAL_MAX_PLATELETS_PER_UL;
-    // Add 5% tolerance to minimum platelet requirement to avoid unnecessary tube increases
-    const plateletCountTooLow = totalPlatelets < (minPlatelets * 0.95);
+    const plateletCountTooLow = totalPlatelets < minPlatelets;
     const plateletCountTooHigh = totalPlatelets > maxPlatelets;
     
     // J. Adjust tube count if needed - PRIORITIZE PLATELET COUNT OVER CONCENTRATION
